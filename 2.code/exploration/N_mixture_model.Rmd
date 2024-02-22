@@ -1,0 +1,542 @@
+---
+title: "Modèle de mélange (N-mixture models)"
+author: "Louis Schroll"
+date: "2024-01-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Vous avez les données suivantes :
+
+$$
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        Site & N & Visit1 & Visit2 & Visit3 & Visit4 & Visit5 \\
+        \hline
+        1 & 3 & 0 & 1 & 1 & 2 & 0 \\
+        2 & 5 & 4 & 2 & 2 & 2 & 1 \\
+        3 & 1 & 0 & 0 & 1 & 0 & 0 \\
+        4 & 1 & 0 & 0 & 0 & 1 & 1 \\
+        \hline
+    \end{tabular}
+    \caption{Tableau des visites par site.}
+    \label{tab:visites}
+\end{table}
+$$
+
+Il s'agit simplement de données de comptage (*count data*) sur 4 sites, visité 5 fois chacun. Pour modéliser l'abondance, on peut choisir de faire un N-mixture modèle.
+
+L'idée de base des N-mixture models est la suivante :
+
+  - **J** sites sont étudiés, pour chacun une abondance $\lambda$ est attendue. Le nombre d'individu réel au site $j$, noté $N_j$, est modélisée par un modèle d'état :
+  
+$$N_j \sim Poisson(\lambda)$$
+
+   - Chaque site est visité **K** fois, à chacune de ces visites chaque individu est détecté avec une probabilité $p$. Le procesus d'observation est modélisé comme suit :
+
+$$
+y_{j,k} \sim binomial(N_j, p)
+$$
+
+Où $y_{j,k}$ est le nombre d'indivus au site $j$ lors de la $k^{eme}$ visite.
+
+## Les hypothèses du modèle N-mixture
+
+  1. Les distributions de Poisson et binomiale décrivent fidèlement les processus d'état et d'observation respectivement.
+  2. L'abondance de chaque site est aléatoire et surtout indépendante de l'abondance des autres sites.
+  3. Entre de chaque campagne de terrain la population reste fermée.
+  4. Les observateurs ne compte jamais 2 fois le même individu.
+  5. Tous les individus ont la même probabilité de détection $p$. 
+
+
+
+## Avantages et inconvénients du modèle de N-mixture
+
+### Avantages
+
+  - La collecte de données de comptage est peu chère (par rapport au marquage-recapture).
+
+  - Ne nécessite pas d'informations auxiliaires (distance, double observateur, etc.)
+
+  - L'analyse est simple
+
+
+### Désavantages
+
+  - Les données de comptage contiennent moins d'informations sur la probabilité de détection $p$ que les données de marquage-recapture
+
+  - Requiert plusieurs réplications du comptage sur chaque site
+
+  - Il faut faire un compromis entre la réplication temporelle et la réplication spatiale
+
+  - L'inférence peut être sensible au non respect des hypothèses
+  
+  
+
+## Extension du modèle
+
+Au modèle de base de nombreuses extensions on été proposé permettant de complexifier le modèle et de lever certaines hypothèses.
+
+
+### Covariables et effets aléatoires
+
+Dans ce cas les valeurs de $\lambda_j$ et $p$ dépendent de covariables (par exemple le type de sol, la température...).
+
+$$
+log(\lambda_j) = \alpha_0 + \alpha_1x_j + \varepsilon_j \ \ \ avec \ \ \varepsilon_j \sim normal(0, \tau)
+\\
+logit(p_{j,k})=\beta_0+\beta_1x_j + \beta_2x_{j,k}
+$$
+
+Pourquoi log et logit ? Pourquoi $\beta_1x_j + \beta_2x_{j,k}$ ? 
+
+
+### Modèle N-mixture ouvert (Open N-mixture model, [Dail & Madsen 2011](https://www.jstor.org/stable/41242495))
+
+$$
+N_{j,1} \sim Poison(\lambda) \\
+N_{j,t}=S_{j,t}+G_{j,t} \\
+S_{j,t}∼biomial(Nj_{j,t-1}, \phi) \\
+G_{j,t}∼Poisson(\gamma N_{j,t-1}) \\
+$$
+
+
+### Utilisation d'autres distributions
+
+Binomiale négative, zero-inflated Poisson, multinomiale
+
+
+### Modèle N-mixture intégré (Integrated N-mixture model)
+
+- Integrated N-mixture/known fate model [Schmidt et al., 2015](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1890/15-0385.1)
+
+- Integrated N-mixture/distance sampling model [Hostetter et al., 2019](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1002/ecs2.2586)
+
+
+
+## Implémentation en JAGS
+
+Pour commencer, nous simulons des données. Puis nous écrivons le modèle JAGS, et on l'ajuste pour vérifier qu'il renvoie les valeurs utilisées pour créer les données. Ici, nous allons simuler et ajuster des données pour deux modèles N-mixture : un modèle "constant" et un modèle dans lequel $\lambda$ et $p$ varie selon des covariables spécifiques au site.
+
+```{r}
+library(coda)
+library(rjags)
+
+library(nimble)
+```
+
+
+#### Le modèle constant
+
+Dans ce modèle on suppose donc que tous les sites présentent une abondance et une probabilité de détection identique. Tout d'abord simulons des données :
+
+```{r}
+# Valeurs pour la creation de donnees
+lambda <- 6
+p <- 0.4
+
+# Nombre de sites et de visites
+J <- 100
+K <- 3
+
+# Simulation du processus d'etat (vraie abondance)
+N <- rpois(n = J, lambda = lambda)
+
+# Simule le processus d'observation et stocke les resultats dans une matrice
+y <- matrix(NA, nrow = J, ncol = K)
+
+for(i in 1:K){
+  y[,i] <- rbinom(n = J, size = N, prob = p)
+}
+```
+
+Ecrivons maintenant le code nimble :
+
+```{r nimble code}
+model <- nimbleCode({
+  # Priors
+  lambda ~ dgamma(0.01, 0.01)
+  p ~ dbeta(1, 1)
+  # Likelihood
+  for(j in 1:J){
+    ## State model
+    N[j] ~ dpois(lambda)
+    ## Observation model
+    for(k in 1:K){
+      y[j, k] ~ dbinom(p, N[j])
+    } # end k loop
+  } # end j loop
+}) # end model
+```
+
+
+Maintenant préparons les données et entrainons le modèle :
+
+```{r}
+my.data <- list(y = y, J = J, K = K)
+
+# generation des valeurs initiales aleatoirement
+set.seed(696)
+initial.values <- function(){list(lambda = runif(1, 0, 10),
+                              p = runif(1, 0, 1),
+                              N = apply(y, 1, max))}
+
+parameters.to.save <- c("lambda", "p", "N")
+
+# Nombre d'iteration, burn-in et nombre de chaine
+n.iter <- 8000
+n.burnin <- 1000
+n.chains <- 3
+
+# Run the model
+mcmc.output <- nimbleMCMC(code = model,
+                          data = my.data,
+                          inits = initial.values,
+                          monitors = parameters.to.save,
+                          niter = n.iter,
+                          nburnin = n.burnin,
+                          nchains = n.chains)
+```
+
+Regardons maintenat les résultats :
+
+```{r}
+library(MCMCvis)
+
+MCMCsummary(object = mcmc.output, round = 2,  params = c("p", "lambda"))
+```
+
+
+```{r}
+MCMCtrace(object = mcmc.output,
+          pdf = FALSE, # no export to PDF
+          ind = TRUE, # separate density lines per chain)
+          Rhat = TRUE, # add Rhat
+          n.eff = TRUE, # add eff sample size
+          params = "p")
+
+MCMCtrace(object = mcmc.output,
+          pdf = FALSE, 
+          ind = TRUE, 
+          Rhat = TRUE, 
+          n.eff = TRUE, 
+          params = "lambda")
+```
+
+Conclusion a propos des resultats...
+
+
+#### Ajout de covariable
+
+Nous allons ajouter des covariables sur $p$ et $\lambda$ de sorte à ce qu'ils varient. Pour faire cela, nous étendons simplement le modèle constant avec un GLM (modèle linéaire généralisé) de Poisson et binomiale :
+
+$$
+N_j \sim Poisson(\lambda_j) \\
+log(\lambda_j)= \alpha_0 + \alpha_1X_j^N \\
+y_{j,k} \sim binomial(N_j, p_{j,k}) \\
+logit(p_{j,k}) = \beta_0 + \beta_1X^P_{j,k}
+$$
+
+Il faut noter que $\lambda$ est un paramètre qui varie entre les sites mais pas entre les visites. On peut inclure des covariables qui expliqueraient cette variation entre les sites (ex : caractéristique de l'habitat, du climat...). Ici, l'équation contient une seule covariable mais le modèle peut bien sur être étendu pour en inclure d'autres. 
+
+Au contraire, $p$ peut varier à la fois entre les sites et entre les visites (c'est pourquoi il est indéxé par $j$ et par $k$). Cela implique que l'ont peut prendre en compte à la fois des covariables dépendante du site (possiblment les mêmes que pour $\lambda$) et de l'occasion (par ex la météo, le nombre d'observateurs, etc). 
+
+Lorsque nous écrivons ce modèle (et tout autre modèle qui inclut des covariables), il est souvent utile de paramétrer les GLM en utilisant un vecteur de coefficients plutôt que des scalaires. Les données sont alors introduites sous forme de matrice ou de tableau et nous utilisons la vectorisation ou l'algèbre matricielle pour calculer le prédicteur linéaire. Dans ce cas :
+
+```{r}
+model.cov <- nimbleCode({
+  # Priors
+    for(a in 1:nAlpha){
+      alpha[a] ~ dnorm(0, 0.1)
+    }
+
+    for(b in 1:nBeta){
+      beta[b] ~ dnorm(0, 0.1)
+    }
+
+    # Likelihood
+    for(j in 1:J){
+     N[j] ~ dpois(lambda[j])
+     log(lambda[j]) <- sum(alpha[1:nAlpha] * XN[j, ])
+
+     for(k in 1:K){
+      y[j, k] ~ dbinom(p[j, k], N[j])
+      logit(p[j, k]) <- sum(beta[1:nBeta] * Xp[k, , j])
+     }
+    }
+     # End model
+})
+```
+
+où `alpha` et beta sont des vecteurs contenant les coefficients d'intercept et de pente, XN est une matrice avec une ligne par site et une colonne par covariable (y compris une colonne de 1 pour l'intercept), et Xp est un tableau à 3 dimensions $K \times x \times J$ (où $x$ est le nombre de covariables dans le modèle de détection, en incluant l'ordonnée à l'origine).
+
+Ce paramétrage présente quelques avantages. Tout d'abord, elle peut accélérer l'ajustement du modèle, parfois de manière substantielle. Deuxièmement, vous pouvez facilement ajouter ou supprimer des covariables sans avoir à modifier le code du modèle. Notez que la longueur des vecteurs alpha et beta est déterminée par nAlpha et nBeta, de sorte que les priors peuvent être modifiés en changeant simplement ces valeurs dans l'objet de données. En outre, les prédicteurs linéaires sont vectorisés de sorte qu'ils seront mis à jour lorsque les dimensions de XN et Xp sont modifiées.
+
+Simulons les données :
+le code provient d'[ici](https://github.com/RushingLab/WILD6900/blob/master/R/sim_Nmix.R)
+
+```{r}
+#' sim_Nmix
+#'
+#' Simulate data for the N-mixture model with site-level covariats on lambda and occasion-level covariates on p
+#' @param J: number of sites at which counts were made
+#' @param K: number of times that counts were made at each site 
+#' @param alpha: vector containing the intercept and slopes of log-linear regression relating abundance to the site covariate A
+#' @param beta: ivector containing the intercept and slopes of logistic-linear regression of detection probability on B
+#' @return List containing the simulated data (y, XN, Xp) and the data-generating values
+#'  
+sim_Nmix <- function(J = 200, K = 3, alpha = c(1,3), beta = c(0, -5)){
+  y <- array(dim = c(J, K))	# Array for counts
+  
+  # Ecological process
+  # Covariate values: sort for ease of presentation
+  XN <- rep(1, J)
+  for(i in 1:(length(alpha)-1)){
+    XN <- cbind(XN, rnorm(n = J))
+  }
+  
+  # Relationship expected abundance ñ covariate
+  lam <- exp(XN %*% alpha)
+  
+  # Add Poisson noise: draw N from Poisson(lambda)
+  N <- rpois(n = J, lambda = lam)
+  totalN <- sum(N)
+  
+  # Observation process
+  # Relationship detection prob ñ covariate
+  Xp <- rep(1, K)
+  for(i in 1:(length(beta)-1)){
+    Xp <- cbind(Xp, rnorm(n = K))
+  }
+  p <- plogis(Xp %*% beta)
+  
+  for(j in 2:J){
+    Xp.temp <- rep(1, K)
+    for(i in 1:(length(beta)-1)){
+      Xp.temp <- cbind(Xp.temp, rnorm(n = K))
+    }
+    p <- cbind(p, plogis(Xp.temp %*% beta))
+    Xp <- abind::abind(Xp, Xp.temp, along = 3)
+  }
+
+  p <- t(p)
+  # Make
+  for (i in 1:K){
+    y[,i] <- rbinom(n = J, size = N, prob = p[,i])
+  }
+  
+  # Return stuff
+  return(list(J = J, K = K, XN = XN, Xp = Xp, 
+              alpha = alpha, beta = beta, 
+              lam = lam, N = N, 
+              totalN = totalN, p = p, y = y,
+              nAlpha = length(alpha), nBeta = length(beta)))
+}
+
+sim_data <-sim_Nmix(J = 150, K = 4, alpha = c(0.2, 1.2, 0.75), beta = c(0.25, -1))
+```
+
+
+```{r}
+my.data.cov <- list(y = sim_data$y, 
+                    XN = sim_data$XN, 
+                    Xp = sim_data$Xp)
+
+my.constants <- list(J = sim_data$J, 
+                    K = sim_data$K, 
+                    nAlpha = dim(sim_data$XN)[2], 
+                    nBeta = dim(sim_data$Xp)[2])
+
+initial.values.cov <- function(){list(N = apply(my.data.cov$y, 1, max) + 1,
+                                      alpha = rep(0.1, dim(sim_data$XN)[2]),
+                                      beta = rep(0.1, dim(sim_data$Xp)[2]))}
+
+parameters.to.save.cov <- c("alpha", "beta", "lambda", "p", "N")
+
+# Nombre d'iterations, burn-in et nombre de chaine
+n.iter <- 1000
+n.burnin <- 100
+n.chains <- 3
+
+# Run the model
+mcmc.output <- nimbleMCMC(code = model.cov,
+                          data = my.data.cov,
+                          constants = my.constants,
+                          inits = initial.values.cov,
+                          monitors = parameters.to.save.cov,
+                          niter = n.iter,
+                          nburnin = n.burnin,
+                          nchains = n.chains)
+```
+
+
+```{r}
+MCMCsummary(object = mcmc.output, round = 2,  params = c("alpha", "beta"))
+```
+
+Il se peut que vous deviez exécuter des chaînes plus longues pour que ce modèle converge, mais les estimations des paramètres devraient être assez proches des valeurs générées par les données. Par exemple, l'abondance attendue sur chaque site :
+
+```{r}
+lambda_samples <- c(mcmc.output$chain1[1,1:150+155] + 
+                   mcmc.output$chain2[1,1:150+155] +
+                   mcmc.output$chain3[1,1:150+155]) / 3
+
+plot(lambda_samples ~ sim_data$lam, 
+     xlab = "Lambda values for simulation",
+     ylab = "Lambda values found with the model")
+abline(0, 1)
+```
+
+## N-mixture modèle avancé
+
+Dans cette partie nous continuerons à explorer certaines des façons de modéliser les données de comptage à l'aide de modèles de N-mixture. En particulier, nous étudierons comment traiter les données de comptage à gonflement nul (*zero-inflated count data*), un problème courant avec les données écologiques. Nous découvrirons également une façon de mesurer la qualité de l'ajustement (*GOF, Goodness Of Fit*) dans un contexte bayésien, avec ce que l'on appelle les vérifications prédictives a posteriori (*posterior predictive check*). 
+
+### Les données
+
+Les données utilisées ici proviennent de ce papier : [N-mixture models reliably estimate the abundance of small vertebrates](https://www.nature.com/articles/s41598-018-28432-8) et ont été téléchargée sur le gitub repository [suivant](https://github.com/RushingLab/WILD6900/tree/master). 
+
+Ces données contiennent des comptages répétés de la salamandre alpine de Lanza (*Salamandra lanzai*), une espèce endémique des Alpes du nord-ouest de l'Italie et de l'est de la France, que l'on ne trouve que dans une petite zone située entre 1200 et 2650 m d'altitude.
+
+```{r}
+load("~/salamanders.rda")
+head(salamanders)
+```
+
+Les sites ont été visité 3 fois au plus et 28 sites ont été visités. On convertit les colonnes 2 à 4 en une matrice de taille JxK=28x3 pour pouvoir les utilisées dans nimble.
+
+```{r}
+### Store counts as JxK matrix
+y <- as.matrix(salamanders[,2:4])
+```
+
+Les chercheurs ont également enregistré l'heure de l'enquête, ce qui nous permet de modéliser la probabilité de détection en fonction de l'heure (supposer que la probabilité de détection pourrait changer selon l'heure à laquelle les comptages sont effectués semble raisonnable). Afin d'utiliser ces données comme prédicteurs dans le modèle, nous devons toutefois compléter les valeurs manquantes. Il y a plusieurs façons de le faire, mais nous remplacerons simplement les valeurs NA par la durée moyenne de l'enquête :
+
+```{r}
+### Store hour of survey as JxK matrix
+hours <- as.matrix(salamanders[,5:7])
+
+### Fill in NA hours with mean survey time
+hours[is.na(hours)] <- mean(hours, na.rm = TRUE)
+
+### Standardize hours
+hours_c <- (hours - mean(hours))/sd(hours)
+```
+
+
+### Un premier modèle
+
+On refait ici un modèle de N-mixture avec de véritables données, en ajoutant une covariable sur $p$ mais pas sur $\lambda$ :
+
+```{r}
+model_salamander <- nimbleCode({
+    # Priors
+    lambda ~ dgamma(0.25, 0.25)
+    beta0 ~ dnorm(0, 0.1)
+    beta1 ~ dnorm(0, 0.1)
+
+    # Likelihood
+    for(j in 1:J){
+      N[j] ~ dpois(lambda)
+
+      for(k in 1:K){
+        y[j, k] ~ dbinom(p[j, k], N[j])
+        logit(p[j, k]) <- beta0 + beta1 * hours[j,k]
+
+        ## Expected count at site j, survey k
+       # exp[j, k] <- N[j] * p[j, k] 
+    
+        ## Discrepancy 
+        ## (note small value added to denominator to avoid potential divide by zero)
+       # E[j, k] <- pow((y[j, k] - exp[j, k]), 2) / (exp[j, k] + 0.5)
+
+        ## Simulate new count from model
+       # y.rep[j, k] ~ dbinom(p[j, k], N[j])
+
+        ## Discrepancy 
+      #  E.rep[j, k] <- pow((y.rep[j, k] - exp[j, k]), 2) / (exp[j, k] + 0.5)
+      } # end k loop
+    } # end j loop
+
+    # chi-squared test statistics
+   # fit <- sum(E[J,K])
+   # fit.rep <- sum(E.rep[J,K])
+})
+```
+
+
+On peut maintenant ajuster le modèle :
+
+```{r}
+## Mettre les données et les constantes dans une listes
+my.data.sal <- list(y = y, hours = hours_c)
+
+my.constants.sal <- list(J = dim(y)[1], K = dim(y)[2])
+
+## Valeurs initiales (see footnote)
+set.seed(666)
+initial.values.sal <- function(){list(lambda = runif(1, min=0, max=3),
+                                      beta0 = rnorm(1), 
+                                      beta1 = rnorm(1),
+                                      N = apply(y, 1, max, na.rm = TRUE) + 1)}
+
+## Parameters to save
+parameters.to.save.sal <- c("lambda", "beta0", "beta1", "N") #, "fit", "fit.rep"
+
+## Fit model
+# MCMC settings
+n.iter <- 10000
+n.burnin <- 2500
+n.chains <- 3
+
+# Run the model
+mcmc.output <- nimbleMCMC(code = model_salamander,
+                          data = my.data.sal,
+                          constants = my.constants.sal,
+                          inits = initial.values.sal,
+                          monitors = parameters.to.save.sal,
+                          niter = n.iter,
+                          nburnin = n.burnin,
+                          nchains = n.chains)
+
+MCMCsummary(object = mcmc.output, round = 2,  params = c("lambda", "beta0", "beta1"))
+
+# mean(mcmc.output$chain1[,"beta0"])
+# mean(mcmc.output$chain2[,"beta0"])
+# mean(mcmc.output$chain3[,"beta0"])
+```
+
+Si votre modèle ne converge pas, essayez d'augmenter le nombre d'itérations.
+
+
+### Posterior Predictive Checks
+
+Appliquer le modèle N-mixture de Poisson suppose que plusieurs hypothèses sont vérifiées. Cependant, nous n'avons pas discuté de la manière de vérifier si nos données respectent ces hypothèses. pour cela il faut faire un test d'adéquation (*goodness-of-fit testing*), mais dans un contexte bayésien. Le model checking bayésien est un domaine vaste et évolutif (voir cet [article](https://esajournals.onlinelibrary.wiley.com/doi/10.1002/ecm.1314) pour une bonne vue d'ensemble des différentes méthodes de model checking). Si vous continuez à utiliser des méthodes bayésiennes, vous devriez prendre le temps d'en apprendre davantage sur ces concepts.
+
+La forme de vérification de modèle que nous utiliserons ici est appelée vérification prédictive a posteriori. L'idée est relativement intuitive :
+
+> Si le modèle est une bonne description des processus d'état et d'observation, les données simulées à partir de la distribution postérieure conjointe devraient être cohérentes avec les données réelles.
+
+Autrement dit, si les données ne respectent pas une ou plusieurs hypothèses du modèle, les données simulées devraient systématiquement différer des données réelles. 
+
+
+La vérification prédictive a posteriori implique plusieurs étapes :
+  1. Définir une statistique $T$ capable de diagnostiquer le non-respect d'une ou plusieurs hypothèse.
+  2. Calculer $T$ pour les données observées : $T(y)$.
+  3. Pour chaque échantillon de la distribution postérieure conjointe, simuler de nouvelles données $y^{rep}$.
+  4. Calculer $T$ pour chaque $y^{rep}$ tiré dans la distribution prédictive à posteriori : $T(y^{rep}|y)$.
+  5. Calculer la proportion de fois où $T(y^{rep}|y) > T(y)$. Cette proportion est appelée la **p-value bayésienne**. 
+  
+Une p-value proche de 0,5 indique un bon ajustement du modèle, tandis qu'une p-value proche de 0 ou 1 indique un manque d'ajustement. 
+
+
+Si ces idées vous semblent un peu confuses, ce n'est pas grave. En parcourant ces étapes avec notre modèle, le fonctionnement du processus se clariefiera. Tout d'abord, définissons une statistique de test. Une statistique de test courante est l'écart $\chi^2$
+ qui mesure en moyenne la distance entre chaque point de données observé et sa valeur attendue
+
+

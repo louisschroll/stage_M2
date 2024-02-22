@@ -1,0 +1,108 @@
+---
+title: "Untitled"
+author: "Louis Schroll"
+date: "2024-02-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r}
+library(stars)
+library(sf)
+library(tidyverse)
+#library(purrr)
+
+raster_cov = read_stars("~/stage_M2/1.data/all_covariates.tif")
+# load data
+load("~/stage_M2/1.data/all_seabirds_counts.rdara")
+```
+
+
+```{r}
+find_good_cell_size <- function(cell_size){
+grid_c <- st_make_grid(raster_cov, 
+                       cellsize = cell_size,
+                       what = "polygons",
+                       square = FALSE)
+
+polygon_values <- split(raster_cov, "band") %>% 
+  st_extract(at = st_centroid(grid_c), mean()) %>% 
+  split("band")
+
+covariates_data <- st_sf(grid_c) %>%
+  mutate(polygon_values$band) %>% 
+  filter(!if_any(winter_SST:mean_CHL, is.na))
+
+  grid <- covariates_data %>% 
+    mutate(id = 1:nrow(covariates_data)) %>% 
+    st_transform(st_crs(pelmed_obs))
+
+  datasets <- list(migralion_obs = list(migralion_obs, migralion_eff),
+                   pelmed_obs = list(pelmed_obs, pelmed_eff),
+                   pnm_obs = list(pnm_obs, pnm_eff),
+                   samm_obs = list(samm_obs, samm_eff))
+  
+  species <- c("goeland leucophee", "puffin yelkouan", "sterne caugek", "puffin de scopoli", 
+               "mouette melanocephale", "sterne pierregarin", "mouette pygmee", 
+               "macareux moine", "oceanite tempete", "mouette tridactyle", "fou de bassan")
+  
+  # Function to compute the proportion
+  compute_grid_prop_w_obs <- function(grid, obs_df, eff_df, species){
+    obs <- obs_df %>% filter(nom_fr == species)
+    ncells_sampled <- st_intersection(grid, eff_df) %>% 
+      as_tibble() %>% 
+      pull(id) %>% 
+      unique() %>% 
+      length()
+    ncells_intersect_obs <- st_intersection(grid, obs) %>% 
+      as_tibble() %>% 
+      pull(id) %>% 
+      unique() %>% 
+      length()
+    return(ncells_intersect_obs / ncells_sampled * 100)
+  }
+  
+  # Map function over datasets and species
+  result <- map_dfr(datasets, ~{
+    dataset <- .x
+    map_dfr(species, ~{
+      species <- .x
+      proportion <- compute_grid_prop_w_obs(grid, obs_df = dataset[[1]],
+                                            eff_df = dataset[[2]], species = species)
+      tibble(species = species, proportion = round(proportion, 2))
+    })
+  })
+  result$dataset <- rep(names(datasets), each=length(species))
+  result <- result %>% pivot_wider(names_from = dataset, values_from =proportion)
+  return(result)
+}
+```
+
+```{r}
+find_good_cell_size(0.1)
+```
+
+```{r}
+find_good_cell_size(0.05)
+```
+
+```{r}
+find_good_cell_size(0.04)
+```
+
+
+
+```{r}
+find_good_cell_size(0.03)
+```
+
+
+
+
+
+
+
+

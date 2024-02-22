@@ -1,0 +1,717 @@
+---
+title: "exploration_remove_one_dataset"
+author: "Louis Schroll"
+date: "2024-02-12"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F, cache = T)
+```
+
+```{r, include = FALSE}
+#rm(list = ls())
+#set.seed(102)
+
+# load packages
+library(tidyverse)
+library(sf)
+library(spOccupancy)
+library(patchwork)
+
+source("~/stage_M2/2.code/format_data_for_spOccupancy.R")
+source("~/stage_M2/2.code/generateAllCombinations.R")
+
+# load data
+load("~/stage_M2/1.data/all_seabirds_counts.rdara")
+load("~/stage_M2/1.data/covariates_data.rdata")
+grid <- covariates_data %>% 
+  mutate(id = 1:nrow(covariates_data)) %>% 
+  st_transform(st_crs(pelmed_obs))
+
+list_covars <- c("bathymetry", "dist_to_shore", "slope", "winter_SST",
+                 "spring_SST", "summer_SST", "autumn_SST", "concavity",
+                 "mean_CHL")
+```
+
+#### PELMED + SAMM + PNM + MIGRALION
+
+```{r, include = FALSE}
+migralion_obs2 <- migralion_obs #%>% filter(session != "prenup_2022")
+migralion_eff2 <- migralion_eff #%>% filter(session != "prenup_2022")
+
+
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 samm = list(obs = samm_obs, eff = samm_eff),
+                 pnm = list(obs = pnm_obs, eff = pnm_eff),
+                 migralion = list(obs = migralion_obs2, eff = migralion_eff2))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(pelmed = ~ scale(transect_length) + session, 
+                    pnm = ~ scale(transect_length) + session,
+                    samm = ~ scale(transect_length) + session,
+                    migralion = ~ scale(transect_length) + session)
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+```
+
+
+```{r, include = FALSE}
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+
+```{r}
+psi 
+sdpsi
+```
+
+
+#### PELMED + SAMM + MIGRALION
+
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 samm = list(obs = samm_obs, eff = samm_eff),
+                 #pnm = list(obs = pnm_obs, eff = pnm_eff),
+                 migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(pelmed = ~ scale(transect_length), 
+                    #pnm = ~ scale(transect_length),
+                    samm = ~ scale(transect_length),
+                    migralion = ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+
+```{r}
+psi 
+sdpsi
+```
+
+#### PELMED + PNM + MIGRALION
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 #samm = list(obs = samm_obs, eff = samm_eff),
+                 pnm = list(obs = pnm_obs, eff = pnm_eff),
+                 migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length),
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+
+```{r}
+psi 
+sdpsi
+```
+
+#### SAMM + PNM + MIGRALION
+
+
+```{r, include = FALSE}
+data_list = list(#pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 samm = list(obs = samm_obs, eff = samm_eff),
+                 pnm = list(obs = pnm_obs, eff = pnm_eff),
+                 migralion = list(obs = migralion_obs, eff = migralion_eff)
+                 )
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length),
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+
+```{r}
+psi 
+sdpsi
+```
+
+
+#### PELMED + SAMM + PNM
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 samm = list(obs = samm_obs, eff = samm_eff),
+                 pnm = list(obs = pnm_obs, eff = pnm_eff))
+                 #migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length),
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+```{r}
+psi 
+sdpsi
+```
+
+#### PELMED + SAMM
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 samm = list(obs = samm_obs, eff = samm_eff))
+                 #pnm = list(obs = pnm_obs, eff = pnm_eff)
+                 #migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+```{r}
+psi 
+sdpsi
+```
+
+#### PELMED + PNM
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                # samm = list(obs = samm_obs, eff = samm_eff))
+                 pnm = list(obs = pnm_obs, eff = pnm_eff))
+                 #migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+```{r}
+psi 
+sdpsi
+```
+
+### PELMED + MIGRALION
+
+```{r, include = FALSE}
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+                 #samm = list(obs = samm_obs, eff = samm_eff))
+                 #pnm = list(obs = pnm_obs, eff = pnm_eff)
+                 migralion = list(obs = migralion_obs, eff = migralion_eff))
+
+species <- "sterne caugek"
+
+data.int <- get_data_for_spOccupancy(data_list, grid, species)
+
+det.formula <- list(~ scale(transect_length), 
+                     ~ scale(transect_length))
+
+# select the cov in the data list
+data_copie <- data.int
+data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(list_covars))
+  
+occ.formula <- writeFormula(list_covars)
+
+
+total_sites_nb <- nrow(data.int$occ.covs)
+
+inits.list <- list(alpha = as.list(rep(0,length(data.int$y))),
+                     beta = 0, 
+                     z = rep(1, total_sites_nb))
+  
+prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
+                     alpha.normal = list(mean = as.list(rep(0,length(data.int$y))), 
+                                         var = as.list(rep(2.72,length(data.int$y)))))
+  
+n.samples <- 8000
+n.burn <- 2000
+n.thin <- 10
+  
+# Approx. run time: < 15 sec
+model_result <- intPGOcc(occ.formula = occ.formula,
+                      det.formula = det.formula, 
+                      data = data_copie,
+                      inits = inits.list,
+                      n.samples = n.samples, 
+                      priors = prior.list, 
+                      n.omp.threads = 1, 
+                      verbose = TRUE, 
+                      n.report = 2000, 
+                      n.burn = n.burn, 
+                      n.thin = n.thin, 
+                      n.chains = 3)
+
+summary(model_result)
+ppc.int.out <- ppcOcc(model_result, 'chi-squared', group = 1)
+summary(ppc.int.out)
+waicOcc(model_result)
+
+grid_pred <- grid %>% 
+  as_tibble() %>% 
+  select(all_of(list_covars))
+
+X.0 <- cbind(1, grid_pred)
+out.int.pred <- predict(model_result, X.0)
+mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+
+psi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
+  scale_fill_viridis_c() + 
+  labs(title = 'Occupancy') +
+  theme_bw()
+
+sdpsi <- ggplot() + 
+  geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
+  scale_fill_viridis_c(option = "B") + 
+  labs(title = 'Occupancy SD') +
+  theme_bw()
+```
+
+```{r}
+psi 
+sdpsi
+```

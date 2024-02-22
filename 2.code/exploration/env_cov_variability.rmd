@@ -1,0 +1,131 @@
+---
+title: "Variability in environmental cov"
+author: "Louis Schroll"
+date: "2024-01-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(terra)
+library(sf)
+library(tidyverse)
+library(patchwork)
+
+load("~/stage_M2/1.data/gdlmap.rdata")
+```
+
+
+```{r}
+raster_sst <- rast("~/stage_M2/1.data/copernicus_data/SST.nc")
+plot(raster_sst)
+```
+
+```{r}
+plot_variation <- function(raster, from = as.Date("2000/01/01"), to = as.Date("2021/06/01")){
+  data <- as.data.frame(raster)
+  colnames(data) <- c()
+
+  selected_rows <- sample.int(nrow(data), 3)
+
+  plot <- data[selected_rows,] %>% 
+    t() %>% 
+    as.data.frame() %>% 
+    mutate(time = seq(as.Date("2000/01/01"), by = "month", length.out = 258)) %>% 
+    filter(time >= from & time <= to) %>% 
+    pivot_longer(-time, values_to = "value", names_to = "place") %>% 
+    group_by(place) %>%
+    mutate(mean_value = mean(value)) %>% 
+    ungroup() %>% 
+    ggplot() +
+    geom_line(aes(x = time, y = value, color = place), linewidth = 0.9) +
+    geom_line(aes(x = time, y = mean_value, color = place), linetype = 2) +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  
+  return(plot)
+}
+
+y2000To2021 <- plot_variation(raster_sst)
+y2019 <- plot_variation(raster_sst, from = as.Date("2019/01/01"), to = as.Date("2019/12/01"))
+
+y2000To2021 + y2019
+```
+
+```{r}
+plot_sd_map <- function(raster){
+  df_sst <- as.data.frame(raster)
+  colnames(df_sst) <- c()
+  
+  df_sd <- crds(raster_sst) %>% 
+    as.data.frame() %>% 
+    mutate(sd_values = apply(df_sst, 1, sd)) 
+  
+  map <- ggplot()+
+  geom_raster(aes(x=x, y=y, fill=sd_values), data=df_sd) +
+  scale_fill_distiller(palette = "Spectral", name = "SD") + 
+  labs(title = "Sea Surface Temperature variability (SST)",
+       subtitle = "Standard deviation of SST for montly values from 2000 to 2021",
+       x = "Longitude",
+       y = "Latitude") +
+  geom_sf(data = gdlmap %>% st_transform(crs = st_crs(raster_sst))) +
+  theme_bw()
+  
+  return(map)
+}
+
+plot_sd_map(raster=raster_sst)
+
+```
+
+```{r}
+raster_sal <- rast("~/stage_M2/1.data/copernicus_data/salinity.nc")
+plot(raster_sal)
+
+y2000To2021 <- plot_variation(raster_sal) 
+y2019 <- plot_variation(raster_sal, from = as.Date("2019/01/01"), to = as.Date("2019/12/01")) 
+
+y2000To2021 + y2019
+
+plot_sd_map(raster=raster_sal)
+
+```
+
+```{r}
+raster_chl <- rast("~/stage_M2/1.data/copernicus_data/chlorophyll.nc")
+plot(raster_chl)
+
+y2000To2021 <- plot_variation(raster_chl)
+y2019 <- plot_variation(raster_chl, from = as.Date("2019/01/01"), to = as.Date("2019/12/01"))
+
+y2000To2021 + y2019
+
+plot_sd_map(raster=raster_chl)
+
+tibble_chl <- raster_chl %>% as_tibble() %>% 
+  janitor::clean_names() %>% 
+  rowwise() %>% 
+  summarise(mean_chl = mean(chl_depth_1_0182366_1:chl_depth_1_0182366_258))
+```
+
+
+
+```{r}
+hist(log(ais_tibble$apparent_fishing_hours), breaks = 2000)
+```
+
+```{r}
+df_static_cov <- depth_raster %>% as.data.frame() %>% 
+  bind_cols(crds(depth_raster))
+
+hist(df_static_cov$concavity, breaks = 10000)
+```
+
+```{r}
+
+```
+

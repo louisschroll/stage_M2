@@ -1,0 +1,294 @@
+---
+title: "exploration_data"
+output: html_document
+date: "2024-01-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# load packages
+library(tidyverse)
+library(sf)
+library(stringi)
+
+load("~/stage_M2/1.data/gdlhex.rdata")
+load("~/stage_M2/1.data/gdlmap.rdata")
+
+format_name <- function(dataset){
+  selected_name <- c("goeland leucophee", "mouette pygmee", "sterne caugek", 
+                   "puffin yelkouan","puffin ind", "mouette melanocephale",
+                   "fou de bassan","oceanite tempete", "mouette tridactyle", 
+                   "pingouin torda", "puffin de scopoli", "sterne pierregarin",
+                   "sterne ind", "puffin des baleares", "grand cormoran",
+                   "mouette rieuse","puffin yelkouan/baleares","plongeon arctique", 
+                   "fou de bassan","macareux moine", "labbe parasite",
+                   "puffin cendre", "laride ind", "mouette/sterne ind", 
+                   "cormoran ind", "labbe parasite/pomarin", "labbe pomarin",
+                   "goeland brun", "sterne/guifette ind", "cormoran huppe", 
+                   "mouette ind", "alcide", "alcide ind", "goeland", 
+                   "goeland gris ind", "grand goeland ind", "grand grebe ind",
+                   "grand puffin ind", "mouette", "oceanite ind", 
+                   "petit puffin", "petit puffin ind", "pingouin ou guillemot", 
+                   "plongeon ind", "puffin", "puffin cendre / de scopoli", 
+                   "sterne moyenne ind")
+  
+  dataset2 <- dataset %>% 
+    mutate(nom_fr = stri_trans_general(str = nom_fr, id = "Latin-ASCII")) %>%  # remove accents
+    mutate(nom_fr = tolower(nom_fr)) %>% # in lower case
+    mutate(nom_fr = str_replace_all(nom_fr, pattern = "sp", replacement = "ind")) %>% 
+    mutate(nom_fr = str_replace_all(nom_fr, pattern = "sp.", replacement = "ind")) %>% 
+    mutate(nom_fr = str_replace_all(nom_fr, pattern = "ind.", replacement = "ind")) %>% 
+    filter(nom_fr %in% selected_name) %>% 
+    mutate(year = lubridate::year(date),
+           month = lubridate::month(date))
+  
+  return(dataset2)
+}
+
+```
+
+```{r}
+# Pelmed 2017 -> 2020
+load("~/stage_M2/1.data/pelmed.rdata")
+unique(pelmed_obs$taxon_fr)
+colnames(pelmed_obs)
+colnames(pelmed_eff)
+
+pelmed_obs <- pelmed_obs %>%
+  select(lat, lon, podSize, transect, routeType, sighting, date,
+         hhmmss, famille_fr, nom_fr, geometry) %>%
+  format_name() %>%
+  rename(Effectif = podSize)
+
+pelmed_obs$date %>% unique() %>% 
+  as.Date() %>% 
+  as_tibble() %>% 
+  mutate(year = year(value),
+         month = month(value),
+         day = day(value)) %>% 
+  arrange(year, month, day)
+
+pelmed_obs %>% as.data.frame() %>% group_by(nom_fr) %>% count(sort = TRUE) 
+
+ggplot() +
+  geom_sf(data = sea.gdl2) +
+  geom_sf(data = pelmed_eff)
+```
+
+```{r}
+# SAMM 2011/2012 - 2018-2019
+load("~/stage_M2/1.data/birdSAMM.rdata")
+
+colnames(birdsamm)
+colnames(effsamm)
+samm_obs <- birdsamm %>% format_name()
+samm_eff <- effsamm
+
+birdsamm %>% group_by(nom_fr) %>% count(sort = TRUE) 
+
+birdsamm$date %>% unique() %>% 
+  as.Date() %>% 
+  as_tibble() %>% 
+  mutate(year = year(value),
+         month = month(value),
+         day = day(value)) %>% 
+  arrange(year, month, day)
+
+ggplot() +
+  geom_sf(data = sea.gdl2) +
+  geom_sf(data = birdsamm)
+
+aa = birdsamm %>% 
+     mutate(year = lubridate::year(date))
+unique(aa$year)
+
+aa %>%  group_by(year) %>% count()
+```
+
+```{r}
+# PNM Golfe du Lion
+load("~/stage_M2/1.data/megaobs.rdata")
+
+colnames(obs_oiseaux)
+
+unique(obs_oiseaux$date)
+
+pnm_obs <- obs_oiseaux %>% 
+  select(espece, famille, date, heure, lat, long, nb, geometry) %>% 
+  rename(nom_fr = espece,
+         effectif = nb) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="Puffin Yelkouan de Mediterranee", "puffin yelkouan", nom_fr)) %>% 
+  format_name()
+
+pnm_eff <- transect
+
+obs_oiseaux %>% group_by(espece) %>% count(sort = TRUE) 
+
+obs_oiseaux$date %>% unique() %>%
+  dmy() %>% 
+  as.Date() %>% 
+  as_tibble() %>% 
+  mutate(year = year(value),
+         month = month(value),
+         day = day(value)) %>% 
+  arrange(year, month, day)
+
+ggplot() +
+  geom_sf(data = gdlmap) +
+  geom_sf(data = sea.gdl2) +
+  geom_sf(data = transect)
+```
+
+```{r}
+# Migralion 2022, 2023
+load("~/stage_M2/1.data/prenup2022.rdata")
+load("~/stage_M2/1.data/postnup2022.rdata")
+load("~/stage_M2/1.data/postnup2023.rdata")
+load("~/stage_M2/1.data/prenup2023.rdata")
+
+colnames(postnup2022_obs)
+
+
+migralion_obs <- prenup22_obs %>%
+  select(Espece, Effectif, geometry, Date_UTC) %>% 
+  bind_rows(postnup2022_obs %>% 
+              select(Espece, Effectif, geometry, Date_UTC)) %>% 
+  # bind_rows(postnup2023_obs %>% 
+  #             select(Espece, Effectif, geometry, Date_UTC)) %>% 
+  # bind_rows(prenup2023_obs %>% 
+  #             select(Espece, Effectif, geometry, Date_UTC)) %>% 
+  rename(nom_fr = Espece,
+         date = Date_UTC) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleare", "puffin yelkouan/baleares", nom_fr)) %>% 
+  format_name()
+
+migralion_eff <- prenup22_eff %>% 
+  bind_rows(postnup2022_eff, prenup2023_eff, postnup2023_eff)
+  
+
+migralion_obs %>% group_by(nom_fr) %>% count(sort = TRUE) 
+
+ggplot() +
+  geom_sf(data = sea.gdl2) +
+  geom_sf(data = postnup2022_obs)
+
+ggplot() +
+  geom_sf(data = migralion_eff %>% filter(year==2023)) +
+  geom_sf(data = migralion_obs %>% filter(year==2023)) +
+  facet_wrap(~session)
+```
+
+
+```{r}
+# fermes pilotes
+library(tidyverse)
+load("~/stage_M2/1.data/pilotebiotope.rdata")
+
+colnames(efglx)
+unique(efglx$occMethodeDetermination)
+
+scientific_name <- c("Larus michahellis Naumann, 1840", 
+                     "Hydrocoloeus minutus (Pallas, 1776)",
+                     "Thalasseus sandvicensis (Latham, 1787)",
+                     "Puffinus yelkouan (Acerbi, 1827)",
+                     "Puffinus Brisson, 1760 sp.",
+                     "Ichthyaetus melanocephalus (Temminck, 1820)",
+                     "Morus bassanus (Linnaeus, 1758)",
+                     "Hydrobates pelagicus (Linnaeus, 1758)",
+                     "Rissa tridactyla (Linnaeus, 1758)",
+                     "Alca torda Linnaeus, 1758",
+                     "Calonectris diomedea (Scopoli, 1769)",
+                     "Sterna hirundo Linnaeus, 1758",
+                     "Sterninae",
+                     "Puffinus mauretanicus Lowe, 1921",
+                     "Phalacrocorax carbo (Linnaeus, 1758)",
+                     "Chroicocephalus ridibundus (Linnaeus, 1766)",
+                     "Puffin yelkouan / Baléares",
+                     "Gavia arctica (Linnaeus, 1758)",
+                     "Sula bassana (Linnaeus, 1758)",
+                     "Fratercula arctica (Linnaeus, 1758)",
+                     "Stercorarius parasiticus (Linnaeus, 1758)")
+
+french_name <- c("goeland leucophee", 
+                 "mouette pygmee",
+                 "sterne caugek",
+                 "puffin yelkouan",
+                 "puffin ind",
+                 "mouette melanocephale",
+                 "fou de bassan",
+                 "oceanite tempete",
+                 "mouette tridactyle",
+                 "pingouin torda",
+                 "puffin de scopoli",
+                 "sterne pierregarin",
+                 "sterne ind",
+                 "puffin des baleares",
+                 "grand cormoran",
+                 "mouette rieuse",
+                 "puffin yelkouan/baleares",
+                 "plongeon arctique",
+                 "fou de bassan",
+                 "macareux moine",
+                 "labbe parasite")
+
+
+
+ferme <- efglx %>% 
+ select("nomCite", "denombrementMax", "denombrementMin", "jourDateDebut") %>% 
+  mutate(nom_fr = case_when(
+    nomCite %in% scientific_name ~ french_name[match(nomCite, scientific_name)],
+    TRUE ~ nomCite)) %>% 
+  mutate(date = as.Date(jourDateDebut)) %>% 
+  format_name() 
+
+ferme_obs <- ferme
+ferme_eff <- NULL
+
+ferme %>% as.data.frame() %>%  group_by(nom_fr) %>% count(sort = TRUE) 
+
+ferme2 <- ferme[as.numeric(st_distance(ferme, ferme[1,])) < as.numeric(max(c(st_distance(ferme, ferme[1,]))))-10,]
+
+ggplot() +
+  geom_sf(data = sea.gdl2) +
+  geom_sf(data = ferme2)
+```
+
+```{r}
+count_bird_obs <- function(data_obs){
+  count_df <- data_obs %>% 
+    as.data.frame() %>% 
+    group_by(nom_fr) %>% 
+    count(sort = TRUE) %>% 
+    filter(n>1)
+  return(count_df)
+}
+
+a <- count_bird_obs(pelmed_obs) %>% rename(pelmed_count = n) 
+b <- count_bird_obs(migralion_obs) %>% rename(migralion_count = n)
+c <- count_bird_obs(samm_obs) %>% rename(samm_count = n)
+d <- count_bird_obs(ferme) %>% rename(ferme_count = n)
+e <- count_bird_obs(pnm_obs) %>% rename(pnm_count = n)
+
+count_df <- merge(a, b, by = "nom_fr", all = TRUE) %>% 
+  merge(c, by = "nom_fr", all = TRUE) %>% 
+  merge(d, by = "nom_fr", all = TRUE) %>% 
+  merge(e, by = "nom_fr", all = TRUE) %>% 
+  arrange(desc(migralion_count), desc(ferme_count))
+
+library(writexl)
+write_xlsx(count_df, path = "comptage_par_espece.xlsx")
+```
+
+```{r}
+save(pelmed_obs, pelmed_eff, 
+     samm_obs, samm_eff, 
+     pnm_obs, pnm_eff,
+     migralion_obs, migralion_eff,
+     ferme_obs, ferme_eff,
+     file = "~/stage_M2/1.data/all_seabirds_counts.rdara")
+
+```
+
