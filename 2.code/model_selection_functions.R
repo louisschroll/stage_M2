@@ -10,16 +10,11 @@
 # auto-correlation, and to retrieve the statistics associated with this model:
 # Rhat, ESS, bayesian p-values, waic score, and cross validation score
 #
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # Load packages
 # library(tidyverse)
 # library(spOccupancy)
-
-det.formula <- list(pelmed = ~ scale(transect_length) + session, 
-                    samm = ~ scale(transect_length) + session,
-                    pnm = ~ scale(transect_length) + session,
-                    migralion = ~ scale(transect_length) + session)
 
 addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
   # Add the models with a quadratic effect on a selected covariates to the models
@@ -31,12 +26,12 @@ addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
 }
 
 
-test_all_models <- function(cov_combination, data.int, det.formula){
+test_all_models <- function(cov_combination, data.int){
   model_nb <- length(cov_combination)
   comparison_df <- tibble()
   for (i in seq_along(cov_combination)){
     print(paste("Testing model", i, "/", model_nb))
-    model_result <- run_int_model(data.int, selected_cov = cov_combination[[i]], det.formula)
+    model_result <- run_int_model(data.int, selected_cov = cov_combination[[i]])
     comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
   }
   
@@ -50,12 +45,11 @@ test_all_models <- function(cov_combination, data.int, det.formula){
 }
 
 
-run_int_model <- function(data.int, selected_cov, det.formula, add_spatial=FALSE){
+run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
   # Wrapper for intPGOcc() function of spOccupancy
   # data.int: a list containing the data with the correct format for intPGOcc()
   # selected_cov: a character vector with the covariates to include in the model
-  # det.formula: a list with the formula to model detection for each dataset
-  
+
   data_copie <- data.int
   if (all(selected_cov != "1")){
     keep_cov <- selected_cov[!str_detect(selected_cov, pattern = "I")] #remove quadratic effect I()^2
@@ -66,6 +60,9 @@ run_int_model <- function(data.int, selected_cov, det.formula, add_spatial=FALSE
   
   nb_datasets <- length(data_copie$y)
   total_sites_nb <- nrow(data.int$occ.covs)
+  det.formula <- as.list(rep("~ scale(transect_length) + session", nb_datasets)) %>%  
+    map(as.formula)
+  
   if (!add_spatial){
     inits.list <- list(alpha = as.list(rep(0, nb_datasets)),
                        beta = 0, 
@@ -86,7 +83,7 @@ run_int_model <- function(data.int, selected_cov, det.formula, add_spatial=FALSE
                              n.samples = n.samples, 
                              priors = prior.list, 
                              n.omp.threads = 1, 
-                             verbose = TRUE, 
+                             verbose = FALSE, 
                              n.report = 2000, 
                              n.burn = n.burn, 
                              n.thin = n.thin, 
@@ -220,24 +217,23 @@ generateAllCombinations <- function(covars)  {
 }
 
 
-
-addSelectionSheet <- function(workbook, sheet_name, df){
+addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
   # Add the data in df to a new sheet of a workbook
   # workbook: a Workbook object, openxlsx package
   # sheet_name: a character giving the name of the sheet
-  # df: a dataframe (24 col) storing the results of model selection (formulas, 
+  # df: a dataframe storing the results of model selection (formulas, 
   # rhat, ESS, WAIC, cross-validation)
   addWorksheet(workbook, sheet_name)
   writeData(workbook, sheet = sheet_name, x = df)
   style <- createStyle(valign = "center", halign = "center")
   addStyle(workbook, sheet = sheet_name, style = style, rows = 1:(nrow(df)+1), cols = 1:ncol(df), gridExpand = TRUE)
-  for (cols in 1:(2*length(data_list))+3) {
+  for (cols in 1:(2*datasets_nb)+3) {
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
                           type = "between", rule = c(0.3, 0.7), 
                           style = createStyle(bgFill = "lightgreen", fontColour = "darkgreen"))
   }
   
-  for (cols in 1:(2*(length(data_list)+1))+11) {
+  for (cols in 1:(2*(datasets_nb+1))+2*datasets_nb+3) {
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
                           type = "colorScale", style = c("red", "white"))
     min_value <- df %>% pull(all_of(cols)) %>% min()

@@ -21,7 +21,8 @@ format_name <- function(dataset, crs_ref){
                      "grand puffin ind", "mouette", "oceanite ind", 
                      "petit puffin", "petit puffin ind", "pingouin ou guillemot", 
                      "plongeon ind", "puffin", "puffin cendre / de scopoli", 
-                     "sterne moyenne ind")
+                     "sterne moyenne ind", "grand labbe", "sterne naine",
+                     "goeland d'audouin", "puffin fuligineux", "sterne caindenne")
   
   dataset2 <- dataset %>% 
     mutate(nom_fr = stri_trans_general(str = nom_fr, id = "Latin-ASCII")) %>%  # remove accents
@@ -91,6 +92,10 @@ pelmed_obs <- pelmed_obs %>%
   mutate(nom_fr = ifelse(nom_fr=="puffin cendre / de scopoli", "puffin de scopoli", nom_fr)) %>%
   mutate(nom_fr = ifelse(nom_fr=="grand puffin ind", "puffin de scopoli", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
   rename(effectif = podSize) %>% 
   mutate(session = as.factor(year))
 
@@ -120,7 +125,8 @@ samm_obs <- birdsamm %>%
   mutate(nom_fr = ifelse(nom_fr=="puffin cendre / de scopoli", "puffin de scopoli", nom_fr)) %>%
   mutate(nom_fr = ifelse(nom_fr=="grand puffin ind", "puffin de scopoli", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>%
+  mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
   add_session_column2(samm_eff)
 
 # PNM Golfe du Lion
@@ -138,8 +144,10 @@ pnm_obs <- obs_oiseaux %>%
   mutate(date = dmy(date)) %>% 
   rename(nom_fr = espece,
          effectif = nb) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="Puffin Yelkouan de Mediterranee", "puffin yelkouan", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="Puffin Yelkouan de Mediterranee", "petit puffin", nom_fr)) %>%
   format_name(ref_coordinate_system) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="goeland", "goeland leucophee", nom_fr)) %>% 
   add_session_column2(pnm_eff)
 
 
@@ -176,8 +184,11 @@ migralion_obs <- prenup22_obs %>%
   rename(nom_fr = Espece,
          date = Date_UTC) %>% 
   mutate(date = as.Date(date)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleare", "puffin yelkouan/baleares", nom_fr)) %>% 
   format_name(ref_coordinate_system) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleares", "petit puffin", nom_fr)) %>%
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleare", "petit puffin", nom_fr)) %>% 
   add_session_column2(migralion_eff) %>% 
   drop_na(session)
 
@@ -214,7 +225,7 @@ scientific_name <- c("Larus michahellis Naumann, 1840",
 french_name <- c("goeland leucophee", 
                  "mouette pygmee",
                  "sterne caugek",
-                 "puffin yelkouan",
+                 "petit puffin",
                  "puffin ind",
                  "mouette melanocephale",
                  "fou de bassan",
@@ -227,7 +238,7 @@ french_name <- c("goeland leucophee",
                  "puffin des baleares",
                  "grand cormoran",
                  "mouette rieuse",
-                 "puffin yelkouan/baleares",
+                 "petit puffin",
                  "plongeon arctique",
                  "fou de bassan",
                  "macareux moine",
@@ -242,7 +253,10 @@ ferme_obs <- efglx %>%
   rename(date = jourDateDebut) %>%
   format_name(ref_coordinate_system) %>% 
   add_session_column() %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin cendre", "puffin de scopoli", nom_fr))
+  mutate(nom_fr = ifelse(nom_fr=="puffin cendre", "puffin de scopoli", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) 
+  
 
 ferme_eff <- NULL
 
@@ -254,3 +268,28 @@ save(pelmed_obs, pelmed_eff,
      migralion_obs, migralion_eff,
      ferme_obs, ferme_eff,
      file = "~/stage_M2/1.data/all_seabirds_counts.rdara")
+
+# comptage / espece
+# count_bird_obs <- function(data_obs){
+#   count_df <- data_obs %>% 
+#     as.data.frame() %>% 
+#     group_by(nom_fr) %>% 
+#     count(sort = TRUE) %>% 
+#     filter(n>1)
+#   return(count_df)
+# }
+# 
+# b <- count_bird_obs(pelmed_obs) %>% rename(pelmed_count = n) 
+# a <- count_bird_obs(migralion_obs) %>% rename(migralion_count = n)
+# c <- count_bird_obs(samm_obs) %>% rename(samm_count = n)
+# e <- count_bird_obs(ferme_obs) %>% rename(ferme_count = n)
+# d <- count_bird_obs(pnm_obs) %>% rename(pnm_count = n)
+# 
+# count_df <- merge(a, b, by = "nom_fr", all = TRUE) %>% 
+#   merge(c, by = "nom_fr", all = TRUE) %>% 
+#   merge(d, by = "nom_fr", all = TRUE) %>% 
+#   merge(e, by = "nom_fr", all = TRUE) %>% 
+#   arrange(desc(migralion_count), desc(ferme_count))
+# 
+# library(writexl)
+# write_xlsx(count_df, path = "comptage_par_espece.xlsx")

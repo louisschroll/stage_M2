@@ -20,16 +20,27 @@ get_data_for_spOccupancy <- function(data_list, grid, species, add_coords=F){
 
 # ---- filter one species ----
 filter_all_dataset <- function(dataset_list, species){
-  filtered_dataset_list <- map(dataset_list, ~ filter_one_dataset(.x, species))
-  return(filtered_dataset_list)
+  filtered_dataset_list <- map(dataset_list, ~ filter_one_dataset(.x, species)) 
+
+  removed_dataset = names(dataset_list)[unlist(map(filtered_dataset_list, is.null))]
+  if (length(removed_dataset) > 0){
+    print(paste0(removed_dataset, 
+                   " contain no observation for this species (",
+                  species, ")"))
+  }
+  # remove NULL values with compact (when no observation are made in a dataset)
+  return(compact(filtered_dataset_list))
 }
 
 
 filter_one_dataset <- function(dataset, species){
-  sub_obs <- dataset$obs %>% filter(nom_fr == species)
-  effective_session <- sub_obs %>% pull(session) %>% unique()
+  subset_obs <- dataset$obs %>% filter(nom_fr == species)
+  if (nrow(subset_obs) == 0){
+    return(NULL)
+  }
+  effective_session <- subset_obs %>% pull(session) %>% unique()
   sub_eff <- dataset$eff %>% filter(session %in% effective_session)
-  return(list(obs = sub_obs, eff = sub_eff))
+  return(list(obs = subset_obs, eff = sub_eff))
 }
 
 

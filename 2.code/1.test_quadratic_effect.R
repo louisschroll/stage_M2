@@ -13,69 +13,74 @@
 cat("\014")              # clear the console
 rm(list = ls())          # remove all variables of the work space
 
-
-species <- "sterne caugek"
-species_list <- c("sterne caugek", "goeland leucophee", "puffin yelkouan",
-                  "mouette melanocephale", "puffin de scopoli", "oceanite tempete")
-
 # load packages
 library(tidyverse)
 library(sf)
 library(spOccupancy)
 library(openxlsx)
 
-source("~/stage_M2/2.code/format_data_for_spOccupancy.R")
-source("~/stage_M2/2.code/generateAllCombinations.R")
-source("~/stage_M2/2.code/model_selection_functions.R")
+source("2.code/format_data_for_spOccupancy.R")
+source("2.code/model_selection_functions.R")
 
 # load data
-load("~/stage_M2/1.data/all_seabirds_counts.rdara")
-load("~/stage_M2/1.data/covariates_data.rdata")
+load("1.data/all_seabirds_counts.rdara")
+load("1.data/covariates_data.rdata")
 
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs))
 
-migralion_obs2 <- migralion_obs #%>% filter(session != "prenup_2022")
-migralion_eff2 <- migralion_eff #%>% filter(session != "prenup_2022")
+test_quad_and_log <- function(data.int, species){
+  
+  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST"))
+                        # "mean_summer_SST", "mean_autumn_SST",
+                        # "sd_winter_SST", "sd_spring_SST",
+                        # "sd_summer_SST", "sd_autumn_SST",
+                        # "mean_SST", "sd_SST",
+                        # "concavity", "slope", "dist_to_shore",
+                        # "bathymetry",
+                        # "mean_CHL", "mean_VEL", "sd_VEL"))
+
+  models_to_test <- map(cov_list, 
+                        function(x) list("1", x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
+  
+  test_and_write_models <- function(cov_combination, data.int){
+    df <- test_all_models(cov_combination, data.int)
+    addSelectionSheet(wb, sheet_name = cov_combination[[2]], df = df, datasets_nb=length(data.int$y))
+  }
+  # Create a new workbook
+  wb <- createWorkbook()
+  
+  # Fill the workbook
+  map(models_to_test, ~ test_and_write_models(cov_combination = .x, data.int = data.int))
+  
+  # Save the workbook
+  file_path <- paste0("3.results/model_selection/", 
+                      str_replace(species, " ","_"), 
+                      "_1_test_log_quad.xlsx")
+  saveWorkbook(wb, file_path, overwrite = TRUE)
+  print(paste("results are in", file_path))
+}
+
+# ----- Hors repro -----
+species_list <- c("sterne caugek", "mouette pygmee", "goeland leucophee", "petit puffin")
+                  # "mouette melanocephale", "puffin de scopoli", "oceanite tempete",
+                  # "mouette pygmee")
+
+migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
+migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
 
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs2, eff = migralion_eff2))
 
-data.int <- get_data_for_spOccupancy(data_list, grid, species)
 
-str(data.int)
 
-det.formula <- list(pelmed = ~ scale(transect_length) + session, 
-                    pnm = ~ scale(transect_length) + session,
-                    samm = ~ scale(transect_length) + session,
-                    migralion = ~ scale(transect_length) + session)
-
-cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST", 
-                      "mean_summer_SST", "mean_autumn_SST", 
-                      #"sd_winter_SST", "sd_spring_SST", 
-                      #"sd_summer_SST", "sd_autumn_SST", 
-                      "mean_SST", "sd_SST", 
-                      "concavity", "slope", "dist_to_shore", 
-                      #"bathymetry", 
-                      "mean_CHL", "mean_VEL", "sd_VEL"))
-
-get_model_list <- function(x){
-  list("1", x,  c(x, paste0("I(",x,")^2")), paste0("log_",x))
-}
-model_to_test <- map(cov_list, get_model_list)
-
-# Create a new workbook
-wb <- createWorkbook()
-for (i in seq_along(model_to_test)){
-  print(paste("Covariates", i, "/", length(model_to_test)))
-  df <- test_all_models(model_to_test[[i]], data.int, det.formula)
-  addSelectionSheet(wb, sheet_name = cov_list[[i]], df = df)
+for (species in species_list){
+  print(species)
+  data.int <- get_data_for_spOccupancy(data_list, grid, species)
+  test_quad_and_log(data.int, species)
 }
 
-# Save the workbook
-saveWorkbook(wb, paste0("quadratic_effect_", str_replace(species, " ","_"), ".xlsx"), overwrite = TRUE)
-
-
+# ----- repro -----
