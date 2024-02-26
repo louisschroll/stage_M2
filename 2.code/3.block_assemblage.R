@@ -43,7 +43,7 @@ test_blocks_assemblage <- function(data.int, best_static_covs, best_dyn_covs, be
   df_grouping <- test_all_models(models_to_test, data.int)
   # Create a new workbook
   wb <- createWorkbook()
-  addSelectionSheet(wb, sheet_name = "blocks", df = df_grouping)
+  addSelectionSheet(wb, sheet_name = "blocks", df = df_grouping, datasets_nb=length(data.int$y))
   # Save the workbook
   file_path <- paste0("3.results/model_selection/", 
                       str_replace(species, " ","_"), 
