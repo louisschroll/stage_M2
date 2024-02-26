@@ -32,14 +32,14 @@ grid <- covariates_data %>%
 
 test_quad_and_log <- function(data.int, species){
   
-  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST"))
-                        # "mean_summer_SST", "mean_autumn_SST",
-                        # "sd_winter_SST", "sd_spring_SST",
-                        # "sd_summer_SST", "sd_autumn_SST",
-                        # "mean_SST", "sd_SST",
-                        # "concavity", "slope", "dist_to_shore",
-                        # "bathymetry",
-                        # "mean_CHL", "mean_VEL", "sd_VEL"))
+  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST",
+                        "mean_summer_SST", "mean_autumn_SST",
+                        "sd_winter_SST", "sd_spring_SST",
+                        "sd_summer_SST", "sd_autumn_SST",
+                        "mean_SST", "sd_SST",
+                        "concavity", "slope", "dist_to_shore",
+                        "bathymetry",
+                        "mean_CHL", "mean_VEL", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list("1", x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
@@ -63,9 +63,8 @@ test_quad_and_log <- function(data.int, species){
 }
 
 # ----- Hors repro -----
-species_list <- c("sterne caugek", "mouette pygmee", "goeland leucophee", "petit puffin")
-                  # "mouette melanocephale", "puffin de scopoli", "oceanite tempete",
-                  # "mouette pygmee")
+species_list <- c("sterne caugek", "mouette pygmee", "goeland leucophee", "petit puffin",
+                   "mouette melanocephale", "puffin de scopoli", "oceanite tempete")
 
 migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
 migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
@@ -83,4 +82,4 @@ for (species in species_list){
   test_quad_and_log(data.int, species)
 }
 
-# ----- repro -----
+ 
