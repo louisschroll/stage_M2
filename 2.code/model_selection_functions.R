@@ -51,10 +51,10 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
   # selected_cov: a character vector with the covariates to include in the model
 
   data_copie <- data.int
-  if (all(selected_cov != "1")){
-    keep_cov <- selected_cov[!str_detect(selected_cov, pattern = "I")] #remove quadratic effect I()^2
-    data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(keep_cov))
-  }
+  # if (all(selected_cov != "1")){
+  #   keep_cov <- selected_cov[!str_detect(selected_cov, pattern = "I")] #remove quadratic effect I()^2
+  #   data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(keep_cov))
+  # }
   
   occ.formula <- writeFormula(selected_cov)
   
@@ -72,9 +72,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 8000
-    n.burn <- 2000
-    n.thin <- 10
+    n.samples <- 10000
+    n.burn <- 1500
+    n.thin <- 5
     
     model_result <- intPGOcc(occ.formula = occ.formula,
                              det.formula = det.formula, 
@@ -116,8 +116,8 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
     n.burn <- 2000
     n.thin <- 10
     tuning <- list(phi = .2)
-    model_result <- spIntPGOcc(occ.formula = occ.formula.int, 
-                             det.formula = det.formula.int, 
+    model_result <- spIntPGOcc(occ.formula = occ.formula, 
+                             det.formula = det.formula, 
                              data = data.int, 
                              inits = inits.list, 
                              priors = prior.list, 
@@ -229,7 +229,7 @@ addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
   addStyle(workbook, sheet = sheet_name, style = style, rows = 1:(nrow(df)+1), cols = 1:ncol(df), gridExpand = TRUE)
   for (cols in 1:(2*datasets_nb)+3) {
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
-                          type = "between", rule = c(0.3, 0.7), 
+                          type = "between", rule = c(0.2, 0.8), 
                           style = createStyle(bgFill = "lightgreen", fontColour = "darkgreen"))
   }
   

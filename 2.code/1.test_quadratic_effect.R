@@ -42,7 +42,7 @@ test_quad_and_log <- function(data.int, species){
                         "mean_CHL", "mean_VEL", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
-                        function(x) list("1", x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
+                        function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
   
   test_and_write_models <- function(cov_combination, data.int){
     df <- test_all_models(cov_combination, data.int)
@@ -66,13 +66,13 @@ test_quad_and_log <- function(data.int, species){
 species_list <- c("sterne caugek", "mouette pygmee", "goeland leucophee", "petit puffin",
                    "mouette melanocephale", "puffin de scopoli", "oceanite tempete")
 
-migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
-migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
+# migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
+# migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
 
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
-                 migralion = list(obs = migralion_obs2, eff = migralion_eff2))
+                 migralion = list(obs = migralion_obs, eff = migralion_eff))
 
 
 

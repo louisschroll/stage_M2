@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, message = F, warning = F, cache = T)
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
 ```
 
 ```{r, include = FALSE}

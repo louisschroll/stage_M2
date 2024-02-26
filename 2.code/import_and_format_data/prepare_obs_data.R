@@ -102,7 +102,8 @@ pelmed_obs <- pelmed_obs %>%
 pelmed_eff <- pelmed_eff %>% 
   select(effort, date, hhmmss, seaState, lat, lon, legLengKm, geometry) %>% 
   mutate(year = year(date),
-         session = as.factor(year))
+         session = as.factor(year),
+         transect_name = 1:nrow(.))
 
 
 # SAMM 2011/2012 - 2018-2019
@@ -110,11 +111,13 @@ load("~/stage_M2/1.data/birdSAMM.rdata")
 
 
 samm_eff <- effsamm %>% 
-  select(nom_suivi, flight, date, hhmmss, seaState, swell, turbidity, skyGlint, 
+  select(nom_suivi, flight, date, hhmmss, DATE_TIME1, seaState, swell, turbidity, skyGlint, 
          glareFrom, glareTo, glareSever, cloudCover, lat, lon, speed, altitude,
          aircraft, seaStIndex, geometry) %>% 
   mutate(year = lubridate::year(date),
-         session = as.factor(nom_suivi)) %>% 
+         session = as.factor(nom_suivi),
+         transect_name = 1:nrow(.),
+         Time = scale(as.Date(DATE_TIME1))) %>% 
   st_transform(crs = ref_coordinate_system)
 
 samm_obs <- birdsamm %>% 
@@ -136,7 +139,8 @@ pnm_eff <- transect %>%
   select(date_tr, long_m, camp, geometry) %>% 
   rename(date = date_tr) %>% 
   mutate(year = year(date),
-         session = as.factor(camp)) 
+         session = as.factor(camp),
+         transect_name = 1:nrow(.)) 
 
 
 pnm_obs <- obs_oiseaux %>% 
@@ -171,16 +175,17 @@ migralion_eff <- prenup22_eff %>%
   bind_rows(postnup2022_eff, prenup2023_eff, postnup2023_eff) %>% 
   mutate(date = day) %>% 
   mutate(year = year(date),
-         session = as.factor(session_migralion)) 
+         session = as.factor(session_migralion),
+         transect_name = 1:nrow(.)) 
 
 migralion_obs <- prenup22_obs %>%
-  select(Espece, Effectif, geometry, Date_UTC) %>% 
+  select(Espece, Effectif, geometry, Date_UTC, Time_UTC) %>% 
   bind_rows(postnup2022_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
   bind_rows(postnup2023_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
   bind_rows(prenup2023_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
   rename(nom_fr = Espece,
          date = Date_UTC) %>% 
   mutate(date = as.Date(date)) %>% 

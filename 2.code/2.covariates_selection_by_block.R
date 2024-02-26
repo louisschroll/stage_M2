@@ -31,23 +31,23 @@ grid <- covariates_data %>%
   st_transform(st_crs(pelmed_obs))
 
 test_covariates_blocks <- function(data.int, static_covs, sst_covs, dyn_covs, species){
-  # Static covariates selection
-  static_cov_combination <- generateAllCombinations(static_covs)
-  df_static_cov <- test_all_models(static_cov_combination, data.int)
-  
-  # temperature cov selection
-  SST_combination <- generateAllCombinations(sst_covs) %>% 
-    c(list("mean_SST", "sd_SST", c("mean_SST", "sd_SST")))
-  df_SST_cov <- test_all_models(SST_combination, data.int)
-  
+  # # Static covariates selection
+  # static_cov_combination <- generateAllCombinations(static_covs)
+  # df_static_cov <- test_all_models(static_cov_combination, data.int)
+  # 
+  # # temperature cov selection
+  # SST_combination <- generateAllCombinations(sst_covs) %>% 
+  #   c(list("mean_SST", "sd_SST", c("mean_SST", "sd_SST")))
+  # df_SST_cov <- test_all_models(SST_combination, data.int)
+  # 
   # Dynamic cov selection
   dyn_cov_combination <- generateAllCombinations(dyn_covs) 
   df_dyn_cov <- test_all_models(dyn_cov_combination, data.int)
   
   # Create a new workbook
   wb <- createWorkbook()
-  addSelectionSheet(wb, sheet_name = "static_covs", df = df_static_cov, datasets_nb=length(data.int$y))
-  addSelectionSheet(wb, sheet_name = "SST_covs", df = df_SST_cov, datasets_nb=length(data.int$y))
+  # addSelectionSheet(wb, sheet_name = "static_covs", df = df_static_cov, datasets_nb=length(data.int$y))
+  # addSelectionSheet(wb, sheet_name = "SST_covs", df = df_SST_cov, datasets_nb=length(data.int$y))
   addSelectionSheet(wb, sheet_name = "dynamic_covs", df = df_dyn_cov, datasets_nb=length(data.int$y))
   
   # Save the workbook

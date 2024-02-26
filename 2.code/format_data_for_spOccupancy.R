@@ -79,31 +79,6 @@ find_intersecting_cells <- function(sampling_points, grid){
   return(intersection)
 }
 
-# find_intersecting_cells <- function(sampling_points, grid){
-#   session_list = as.character(unique(sampling_points$session))
-#   isSampled_matrix <- matrix(nrow=nrow(grid), ncol = length(session_list))
-#   i = 1
-#   for (S in session_list){
-#     isSampled <- sampling_points %>% filter(session == S) %>%
-#       is_sampled_session(grid = grid)
-#     isSampled_matrix[,i] <- isSampled
-#     i = i + 1
-#   }
-#   insecting_cells <- seq(1:nrow(grid))[rowSums(isSampled_matrix)>1]
-#   return(insecting_cells)
-# }
-# 
-# 
-# is_sampled_session <- function(sampling_points, grid){
-#   
-#   intersection <- st_intersection(sampling_points, grid) %>%
-#     as.data.frame() %>%
-#     pull(id) %>%
-#     unique() 
-#   isSampled <- ifelse(1:nrow(grid) %in% intersection, TRUE, FALSE)
-#   
-#   return(isSampled)
-# }
 
 
 convert_site_ID <- function(sites, gridocc){
@@ -152,8 +127,7 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
   
   intersect_obs <- st_intersection(obs_data, occurence_df) 
   intersect_eff <- st_intersection(eff_data, occurence_df) 
-  # intersect_eff$length <- st_length(intersect_eff)
-  
+
   occurence_list = c()
   effort_list = c()
   store_session = c()
@@ -187,7 +161,6 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
   detcov <- matrix(effort_list, ncol = length(session_list))
   detcov[detcov == 0] <- NA
   detcov <- scale(detcov)
-  all(detcov == effort_matrix)
   # check dimensions 
   if( !(length(which(is.na(y))) == length(which(is.na(detcov))) ) ){
     print("Warnings: inconsistent dimensions in data")
