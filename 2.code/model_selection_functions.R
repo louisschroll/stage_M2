@@ -72,9 +72,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 10000
+    n.samples <- 9000
     n.burn <- 1500
-    n.thin <- 5
+    n.thin <- 3
     
     model_result <- intPGOcc(occ.formula = occ.formula,
                              det.formula = det.formula, 
@@ -154,8 +154,8 @@ get_model_stat <- function(model_result){
   convergence_df$ESS_min <- model_result$ESS %>% unlist() %>% min() %>% round(1)
   
   # Bayesian p-value
-  ppc.out.1 <- ppcOcc(model_result, 'chi-squared', group = 1)
-  ppc.out.2 <- ppcOcc(model_result, 'chi-squared', group = 2)
+  ppc.out.1 <- ppcOcc(model_result, 'freeman-tukey', group = 1)
+  ppc.out.2 <- ppcOcc(model_result, 'freeman-tukey', group = 2)
   
   nb_datasets <- length(ppc.out.1$fit.y)
   pvalue_df <- tibble(gr1 = compute_bayesian_pvalue(ppc.out.1), 
@@ -167,13 +167,13 @@ get_model_stat <- function(model_result){
   # WAIC
   waic_df <- waicOcc(model_result) %>% 
     select(WAIC) %>% 
-    round(1) %>% 
+    round(0) %>% 
     mutate(name = paste0("waic_d",1:nrow(.))) %>% 
     pivot_wider(names_from = name, values_from = WAIC) %>% 
     mutate(waic_tot = rowSums(.))
   
   # k-fold cross-validation
-  kfold_df <- tibble(deviance = model_result$k.fold.deviance %>% round(1), 
+  kfold_df <- tibble(deviance = model_result$k.fold.deviance %>% round(0), 
                   name = paste0("CV_d", seq_along(model_result$k.fold.deviance))) %>% 
     pivot_wider(names_from = name, values_from = deviance) %>% 
     mutate(CV_tot = rowSums(.))
@@ -192,7 +192,7 @@ compute_bayesian_pvalue <- function(ppc.out){
     sim <- sim_values[[i]]
     sum(sim > obs) / length(obs)
   })
-  return(round(unlist(pvalues), 3))
+  return(round(unlist(pvalues), 2))
 }
 
 
@@ -229,7 +229,7 @@ addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
   addStyle(workbook, sheet = sheet_name, style = style, rows = 1:(nrow(df)+1), cols = 1:ncol(df), gridExpand = TRUE)
   for (cols in 1:(2*datasets_nb)+3) {
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
-                          type = "between", rule = c(0.2, 0.8), 
+                          type = "between", rule = c(0.1, 0.9), 
                           style = createStyle(bgFill = "lightgreen", fontColour = "darkgreen"))
   }
   
