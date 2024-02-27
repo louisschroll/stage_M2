@@ -77,7 +77,6 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
 
-
 for (species in species_list){
   print(species)
   data.int <- get_data_for_spOccupancy(data_list, grid, species)
