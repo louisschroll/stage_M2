@@ -64,9 +64,9 @@ test_quad_and_log <- function(data.int, species){
 
 # ----- Hors repro -----
 species_list <- c("sterne caugek", "goeland leucophee", "petit puffin", "mouette pygmee", 
-                   "mouette melanocephale", "puffin de scopoli", "oceanite tempete")
+                   "mouette melanocephale", "puffin de scopoli")
                 
-species_list <- c("fou de bassan")
+# species_list <- c("oceanite tempete", "fou de bassan")
 
 # migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
 # migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
