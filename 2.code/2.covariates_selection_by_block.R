@@ -34,12 +34,12 @@ test_covariates_blocks <- function(data.int, static_covs, sst_covs, dyn_covs, sp
   # Static covariates selection
   static_cov_combination <- generateAllCombinations(static_covs)
   df_static_cov <- test_all_models(static_cov_combination, data.int)
-  
+
   # temperature cov selection
-  SST_combination <- generateAllCombinations(sst_covs) %>% 
-    c(list("mean_SST", "sd_SST", c("mean_SST", "sd_SST")))
+  SST_combination <- generateAllCombinations(sst_covs) %>%
+    c(list("mean_SST", c("mean_SST", "sd_SST")))
   df_SST_cov <- test_all_models(SST_combination, data.int)
-  
+
   # Dynamic cov selection
   dyn_cov_combination <- generateAllCombinations(dyn_covs) 
   df_dyn_cov <- test_all_models(dyn_cov_combination, data.int)

@@ -14,7 +14,7 @@
 
 cat("\014")              # clear the console
 rm(list = ls())          # remove all variables of the work space
-setwd("~/stage_M2/1.data")
+setwd("/1.data")
 
 # Import packages
 library(terra)
