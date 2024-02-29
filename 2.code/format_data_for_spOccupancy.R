@@ -34,7 +34,7 @@ filter_all_dataset <- function(dataset_list, species){
 
 
 filter_one_dataset <- function(dataset, species){
-  subset_obs <- dataset$obs %>% filter(nom_fr == species)
+  subset_obs <- dataset$obs %>% filter(species_name == species)
   if (nrow(subset_obs) == 0){
     return(NULL)
   }

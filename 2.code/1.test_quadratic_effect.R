@@ -33,12 +33,12 @@ grid <- covariates_data %>%
 test_quad_and_log <- function(data.int, species){
   
   cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST",
-                        "mean_summer_SST", "mean_autumn_SST",
-                        "sd_winter_SST", "sd_spring_SST",
-                        "sd_summer_SST", "sd_autumn_SST",
-                        "mean_SST", "sd_SST",
-                        "concavity", "slope", "dist_to_shore",
-                        "bathymetry",
+                        # "mean_summer_SST", "mean_autumn_SST",
+                        # #"sd_winter_SST", "sd_spring_SST",
+                        # #"sd_summer_SST", "sd_autumn_SST",
+                        # "mean_SST", "sd_SST",
+                        # "concavity", "slope", "dist_to_shore",
+                        # "bathymetry",
                         "mean_CHL", "mean_VEL", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
@@ -65,7 +65,7 @@ test_quad_and_log <- function(data.int, species){
 # ----- Hors repro -----
 species_list <- c("sterne caugek", "goeland leucophee", "petit puffin", "mouette pygmee", 
                    "mouette melanocephale", "puffin de scopoli")
-                
+species_list <- c("goeland_leucophee_HR", "goeland_leucophee_R")                
 # species_list <- c("oceanite tempete", "fou de bassan")
 
 # migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")

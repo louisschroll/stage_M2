@@ -1,0 +1,554 @@
+---
+title: "Untitled"
+author: "Louis Schroll"
+date: "2024-02-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+```
+
+```{r}
+# load packages
+library(tidyverse)
+library(sf)
+library(spOccupancy)
+library(openxlsx)
+
+source("2.code/format_data_for_spOccupancy.R")
+source("2.code/model_selection_functions.R")
+
+# load data
+load("1.data/all_seabirds_counts.rdara")
+load("1.data/covariates_data.rdata")
+
+grid <- covariates_data %>% 
+  mutate(id = 1:nrow(covariates_data)) %>% 
+  st_transform(st_crs(pelmed_obs))
+```
+
+# MIGRALION
+
+```{r, echo = FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = migralion_obs, eff = migralion_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ 1
+oven.det.formula <- ~ scale(transect_length) + session
+
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+```{r, echo=FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = migralion_obs, eff = migralion_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ 1
+oven.det.formula <- ~ scale(transect_length) + session + (1 | transect_name)
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+
+# PNM
+
+```{r, echo = FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = pnm_obs, eff = pnm_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+```{r, echo=FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = pnm_obs, eff = pnm_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session + (1 | transect_name)
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+# Pelmed
+
+```{r, echo = FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = pelmed_obs, eff = pelmed_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+```{r, echo=FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = pelmed_obs, eff = pelmed_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session + (1 | transect_name)
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+# SAMM
+
+```{r, echo = FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = samm_obs, eff = samm_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+```{r, echo=FALSE}
+species <- "sterne caugek"
+data_list = list(migralion = list(obs = samm_obs, eff = samm_eff))
+data <- get_data_for_spOccupancy(data_list, grid, species)
+
+data_migralion <- list(y = data$y[[1]],
+                       occ.covs = data$occ.covs,
+                       det.covs = data$det.covs[[1]])
+
+oven.occ.formula <- ~ mean_SST
+oven.det.formula <- ~ scale(transect_length) + session + (1 | transect_name)
+
+# Format with explicit specification of inits for alpha and beta
+# with four detection parameters and three occurrence parameters 
+# (including the intercept).
+oven.inits <- list(alpha = c(0, 0, 0, 0), 
+                   beta = c(0, 0, 0), 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+# Format with abbreviated specification of inits for alpha and beta.
+oven.inits <- list(alpha = 0, 
+                   beta = 0, 
+                   z = apply(data_migralion$y, 1, max, na.rm = TRUE))
+
+oven.priors <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                    beta.normal = list(mean = 0, var = 2.72))
+
+n.samples <- 5000
+n.burn <- 1500
+n.thin <- 2
+n.chains <- 3
+
+out <- PGOcc(occ.formula = oven.occ.formula, 
+             det.formula = oven.det.formula, 
+             data = data_migralion, 
+             inits = oven.inits, 
+             n.samples = n.samples, 
+             priors = oven.priors, 
+             n.omp.threads = 1, 
+             verbose = F, 
+             n.report = 1000, 
+             n.burn = n.burn, 
+             n.thin = n.thin, 
+             n.chains = n.chains)
+```
+
+```{r}
+ppc.out1 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'freeman-tukey', group = 2)
+summary(ppc.out2)
+
+ppc.out1 <- ppcOcc(out, fit.stat = 'chi-squared', group = 1)
+summary(ppc.out1)
+
+ppc.out2 <- ppcOcc(out, fit.stat = 'chi-squared', group = 2)
+summary(ppc.out2)
+```
+
+```{r}
+waicOcc(out)
+```
+
+
+
+

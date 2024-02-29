@@ -272,7 +272,7 @@ save(pelmed_obs, pelmed_eff,
      pnm_obs, pnm_eff,
      migralion_obs, migralion_eff,
      ferme_obs, ferme_eff,
-     file = "~/stage_M2/1.data/all_seabirds_counts.rdara")
+     file = "~/stage_M2/1.data/all_seabirds_counts.rdata")
 
 # comptage / espece
 # count_bird_obs <- function(data_obs){

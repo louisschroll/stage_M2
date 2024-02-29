@@ -1,0 +1,153 @@
+---
+title: "Untitled"
+author: "Louis Schroll"
+date: "2024-02-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+load("1.data/all_seabirds_counts.rdata")
+```
+
+
+```{r}
+library(tidyverse)
+library(sf)
+count_by_session <- function(data_obs, species){
+  cbs <- data_obs %>% as_tibble() %>% 
+    filter(nom_fr == species) %>% 
+    group_by(session) %>% 
+    count()
+  
+  tot <- data_obs %>% as_tibble() %>% 
+    filter(session %in% cbs$session) %>% 
+    group_by(session) %>% 
+    count()
+  
+  cbs$prop <- round(cbs$n / tot$n * 100, 1)
+  
+  date_df <- data_obs %>% as_tibble() %>% group_by(session) %>% summarise(begin = min(date), end = max(date))
+
+  return(full_join(date_df, cbs, by = join_by(session)))
+}
+
+migralion_obs$species_name <- migralion_obs$nom_fr
+pelmed_obs$species_name <- pelmed_obs$nom_fr
+pnm_obs$species_name <- pnm_obs$nom_fr
+samm_obs$species_name <- samm_obs$nom_fr
+```
+
+## Yellow-legged Gull / Goeland leucophee
+
+Presence: year-round 
+Reproduction: from March to July
+
+Split data:
+  - During repro: migralion data, prenup sessions, Megaobs data, spring sessions
+  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
+
+```{r}
+species <- "goeland leucophee"
+count_by_session(migralion_obs, species)
+count_by_session(samm_obs, species)
+count_by_session(pelmed_obs, species)
+count_by_session(pnm_obs, species)
+```
+
+```{r}
+split_periods <- function(data_obs, species, session_repro, session_HR){
+  data_obs %>% 
+    mutate(species_name = ifelse(session %in% session_repro & nom_fr == species, 
+                                        paste0(str_replace(species, " ", "_"), "_R"),
+                                       species_name)) %>% 
+    mutate(species_name = ifelse(session %in% session_HR & nom_fr == species, 
+                                        paste0(str_replace(species, " ", "_"), "_HR"),
+                                       species_name))
+}
+
+migralion_obs <- split_periods(migralion_obs, species="goeland leucophee", 
+              session_repro = c("prenup_2022", "prenup_2023"), 
+              session_HR = c("postnup_2022", "postnup_2023"))
+
+pnm_obs <- split_periods(pnm_obs, "goeland leucophee", 
+              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
+              session_HR = c("2019_automne", "2020_automne"))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="goeland leucophee", "goeland_leucophee_HR", species_name))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "goeland leucophee",
+                                                 "goeland_leucophee_HR", species_name))
+```
+
+
+## Small shearwaters / Petits puffins (Puffins des Baléares + Puffins yelkouan)
+
+Presence: year-round for Yelkouan, and 
+Reproduction: from March to July
+
+Split data:
+  - During repro: migralion data, prenup sessions, Megaobs data, spring sessions
+  - Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, Pelmed data, SAMM data winter sessions
+
+```{r}
+species <- "petit puffin"
+count_by_session(migralion_obs, species)
+count_by_session(samm_obs, species)
+count_by_session(pelmed_obs, species)
+count_by_session(pnm_obs, species)
+```
+
+
+## Mouette pygmée
+
+Presence: winter - spring
+Keep data: Migralion, prenup sessions, SAMM, winter sessions
+
+```{r}
+species <- "mouette pygmee"
+count_by_session(migralion_obs, species)
+count_by_session(samm_obs, species)
+count_by_session(pelmed_obs, species)
+count_by_session(pnm_obs, species)
+```
+
+
+## Sandwich terns / Sternes caugek
+
+Presence: 
+Reproduction: 
+
+Split data:
+  - During repro: migralion, prenup sessions, Megaobs, spring sessions
+  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
+
+```{r}
+species <- "sterne caugek"
+count_by_session(migralion_obs, species)
+count_by_session(samm_obs, species)
+count_by_session(pelmed_obs, species)
+count_by_session(pnm_obs, species)
+```
+
+
+## Mouette melano
+
+Presence: 
+Reproduction: 
+
+Split data:
+  - During repro: 
+  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
+
+```{r}
+species <- "mouette melanocephale"
+count_by_session(migralion_obs, species)
+count_by_session(samm_obs, species)
+count_by_session(pelmed_obs, species)
+count_by_session(pnm_obs, species)
+```

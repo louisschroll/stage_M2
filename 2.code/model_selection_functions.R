@@ -29,18 +29,28 @@ addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
 test_all_models <- function(cov_combination, data.int){
   model_nb <- length(cov_combination)
   comparison_df <- tibble()
+  beta_value_df <- tibble()
   for (i in seq_along(cov_combination)){
     print(paste("Testing model", i, "/", model_nb))
-    model_result <- run_int_model(data.int, selected_cov = cov_combination[[i]])
+    selected_cov = cov_combination[[i]]
+    model_result <- run_int_model(data.int, selected_cov)
     comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
+    beta_value_df <- beta_value_df %>% bind_rows(get_beta_values(model_result,selected_cov, model_nb=i))
   }
   
   comparison_df <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
     unlist() %>% 
     as_tibble() %>% 
     rename(model = value) %>% 
-    bind_cols(comparison_df)
+    bind_cols(comparison_df) 
   
+  if (selected_cov != "1"){
+    beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
+      pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
+      select(-model)
+    
+    comparison_df <- bind_cols(comparison_df, beta_df_completed)
+  }
   return(comparison_df)
 }
 
@@ -182,17 +192,48 @@ get_model_stat <- function(model_result){
 }
 
 
-compute_bayesian_pvalue <- function(ppc.out){
+compute_bayesian_pvalue <- function(ppc.out, isIntegrated = TRUE){
   # Compute baysian p-values with the result of ppcOcc function (spOccupancy)
   # Output: a numeric vector containing one p-value for each data set
-  obs_values <- ppc.out$fit.y
-  sim_values <- ppc.out$fit.y.rep
-  pvalues <- lapply(seq_along(obs_values), function(i) {
-    obs <- obs_values[[i]]
-    sim <- sim_values[[i]]
-    sum(sim > obs) / length(obs)
-  })
-  return(round(unlist(pvalues), 2))
+  if (isIntegrated){
+    obs_values <- ppc.out$fit.y
+    sim_values <- ppc.out$fit.y.rep
+    pvalues <- lapply(seq_along(obs_values), function(i) {
+      obs <- obs_values[[i]]
+      sim <- sim_values[[i]]
+      sum(sim > obs) / length(obs)
+    })
+    return(round(unlist(pvalues), 2))
+  }
+  else {
+    obs <- ppc.out$fit.y
+    sim <- ppc.out$fit.y.rep
+    pvalue <- sum(sim > obs) / length(obs)
+    return(pvalue)
+  }
+}
+
+
+get_beta_values <- function(model_result, selected_cov, model_nb){
+  if ("1" %in% selected_cov){
+    return(tibble())
+  }
+  selected_cov[str_detect(selected_cov, pattern = "I")] <- str_replace(selected_cov[str_detect(selected_cov, pattern = "I")], "\\^2", "")
+  
+  mean_beta <- model_result$beta.samples %>% as_tibble() %>% 
+    select(all_of(selected_cov)) %>% 
+    summarise_all(mean) %>% 
+    pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "beta") %>% 
+    mutate(model = model_nb)
+  
+  sd_beta <- model_result$beta.samples %>% as_tibble() %>% 
+    select(all_of(selected_cov)) %>% 
+    summarise_all(sd) %>% 
+    pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "sd_beta") %>% 
+    mutate(model = model_nb)
+  
+  return(mean_beta %>% 
+    full_join(sd_beta, by = join_by(covar, model)))
 }
 
 
