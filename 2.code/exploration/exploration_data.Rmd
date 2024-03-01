@@ -244,7 +244,7 @@ ferme <- efglx %>%
   mutate(date = as.Date(jourDateDebut)) %>% 
   format_name() 
 
-ferme_obs <- ferme
+ferme_obs <- ferme[as.numeric(st_distance(ferme, ferme[1,])) < as.numeric(max(c(st_distance(ferme, ferme[1,]))))-10,]
 ferme_eff <- NULL
 
 ferme %>% as.data.frame() %>%  group_by(nom_fr) %>% count(sort = TRUE) 
@@ -252,8 +252,9 @@ ferme %>% as.data.frame() %>%  group_by(nom_fr) %>% count(sort = TRUE)
 ferme2 <- ferme[as.numeric(st_distance(ferme, ferme[1,])) < as.numeric(max(c(st_distance(ferme, ferme[1,]))))-10,]
 
 ggplot() +
-  geom_sf(data = sea.gdl2) +
-  geom_sf(data = ferme2)
+  geom_sf(data = sea.gdl2 %>% st_crop(xmin = 60300, ymin = 6055601, xmax = 1000000, ymax = 6301597)) +
+  geom_sf(data = ferme_obs) +
+  labs(title = "Observations ferme pilote")
 ```
 
 ```{r}

@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-load("1.data/all_seabirds_counts.rdata")
+load("~/stage_M2/1.data/all_seabirds_counts.rdata")
 ```
 
 
@@ -35,10 +35,10 @@ count_by_session <- function(data_obs, species){
   return(full_join(date_df, cbs, by = join_by(session)))
 }
 
-migralion_obs$species_name <- migralion_obs$nom_fr
-pelmed_obs$species_name <- pelmed_obs$nom_fr
-pnm_obs$species_name <- pnm_obs$nom_fr
-samm_obs$species_name <- samm_obs$nom_fr
+migralion_obs$species_name <- NA
+pelmed_obs$species_name <- NA
+pnm_obs$species_name <- NA
+samm_obs$species_name <- NA
 ```
 
 ## Yellow-legged Gull / Goeland leucophee
@@ -48,7 +48,7 @@ Reproduction: from March to July
 
 Split data:
   - During repro: migralion data, prenup sessions, Megaobs data, spring sessions
-  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
+  - Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, Pelmed data, SAMM data winter sessions
 
 ```{r}
 species <- "goeland leucophee"
@@ -87,7 +87,7 @@ samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1wi
 
 ## Small shearwaters / Petits puffins (Puffins des Baléares + Puffins yelkouan)
 
-Presence: year-round for Yelkouan, and 
+Presence: year-round for Yelkouan, and fo balearic
 Reproduction: from March to July
 
 Split data:
@@ -102,10 +102,27 @@ count_by_session(pelmed_obs, species)
 count_by_session(pnm_obs, species)
 ```
 
+```{r}
+migralion_obs <- split_periods(migralion_obs, species="petit puffin", 
+              session_repro = c("prenup_2022", "prenup_2023"), 
+              session_HR = c("postnup_2022", "postnup_2023"))
+
+pnm_obs <- split_periods(pnm_obs, "petit puffin", 
+              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
+              session_HR = c("2019_automne", "2020_automne"))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="petit puffin", "petit_puffin_HR", species_name))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "petit puffin",
+                                                 "petit_puffin_HR", species_name))
+```
+
 
 ## Mouette pygmée
 
 Presence: winter - spring
+Repro :may to end of July
 Keep data: Migralion, prenup sessions, SAMM, winter sessions
 
 ```{r}
@@ -116,15 +133,25 @@ count_by_session(pelmed_obs, species)
 count_by_session(pnm_obs, species)
 ```
 
+```{r}
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "mouette pygmee",
+                                                 "mouette_pygmee_HR", species_name))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(session %in% c("prenup_2022", "prenup_2023") 
+                                                 & nom_fr == "mouette pygmee",
+                                                 "mouette_pygmee_HR", species_name))
+```
+
 
 ## Sandwich terns / Sternes caugek
 
-Presence: 
-Reproduction: 
+Presence: y-round
+Reproduction: mars-avril à juillet
 
 Split data:
   - During repro: migralion, prenup sessions, Megaobs, spring sessions
-  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
+  - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM all sessions
 
 ```{r}
 species <- "sterne caugek"
@@ -134,6 +161,21 @@ count_by_session(pelmed_obs, species)
 count_by_session(pnm_obs, species)
 ```
 
+```{r}
+migralion_obs <- split_periods(migralion_obs, species="sterne caugek", 
+              session_repro = c("prenup_2022", "prenup_2023"), 
+              session_HR = c("postnup_2022", "postnup_2023"))
+
+pnm_obs <- split_periods(pnm_obs, "sterne caugek", 
+              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
+              session_HR = c("2019_automne", "2020_automne"))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="sterne caugek", "sterne_caugek_HR", species_name))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "sterne caugek",
+                                                 "sterne_caugek_HR", species_name))
+```
+
 
 ## Mouette melano
 
@@ -141,7 +183,7 @@ Presence:
 Reproduction: 
 
 Split data:
-  - During repro: 
+  - During repro: migralion prenup sessions, pelmed?
   - Outside repro: migralion data postnup sessions, Megaobs data automn sessions, Pelmed data, SAMM data winter sessions
 
 ```{r}
@@ -150,4 +192,25 @@ count_by_session(migralion_obs, species)
 count_by_session(samm_obs, species)
 count_by_session(pelmed_obs, species)
 count_by_session(pnm_obs, species)
+```
+
+
+```{r}
+# migralion_obs <- split_periods(migralion_obs, species="mouette melanocephale", 
+#               session_repro = c("prenup_2022", "prenup_2023"), 
+#               session_HR = c("postnup_2022", "postnup_2023"))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocephale" 
+                                                    & session %in% c("postnup_2022", "postnup_2023"), 
+                                                    "mouette_melanocephale_HR", species_name))
+
+pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocephale" 
+                                                    & session %in% c("2019_automne", "2020_automne"), 
+                                                    "mouette_melanocephale_HR", species_name))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocephale", "mouette_melanocephale_HR", species_name))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "mouette melanocephale",
+                                                 "mouette_melanocephale_HR", species_name))
 ```

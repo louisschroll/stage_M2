@@ -61,11 +61,6 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
   # selected_cov: a character vector with the covariates to include in the model
 
   data_copie <- data.int
-  # if (all(selected_cov != "1")){
-  #   keep_cov <- selected_cov[!str_detect(selected_cov, pattern = "I")] #remove quadratic effect I()^2
-  #   data_copie$occ.covs <- data_copie$occ.covs %>% select(all_of(keep_cov))
-  # }
-  
   occ.formula <- writeFormula(selected_cov)
   
   nb_datasets <- length(data_copie$y)
@@ -281,6 +276,6 @@ addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
                           type = "expression", 
                           rule = paste0("<", min_value+5),
-                          style = createStyle(fontColour = "white", textDecoration = "bold"))
+                          style = createStyle(fontColour = "lightpink", textDecoration = "bold"))
   }
 }

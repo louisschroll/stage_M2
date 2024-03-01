@@ -33,26 +33,27 @@ grid <- covariates_data %>%
 test_quad_and_log <- function(data.int, species){
   
   cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST",
-                        # "mean_summer_SST", "mean_autumn_SST",
-                        # #"sd_winter_SST", "sd_spring_SST",
-                        # #"sd_summer_SST", "sd_autumn_SST",
-                        # "mean_SST", "sd_SST",
-                        # "concavity", "slope", "dist_to_shore",
-                        # "bathymetry",
+                        "mean_summer_SST", "mean_autumn_SST",
+                        #"sd_winter_SST", "sd_spring_SST",
+                        #"sd_summer_SST", "sd_autumn_SST",
+                        "mean_SST", "sd_SST",
+                        "concavity", "slope", "dist_to_shore",
+                        "bathymetry",
                         "mean_CHL", "mean_VEL", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
   
-  test_and_write_models <- function(cov_combination, data.int){
+  test_and_write_models <- function(cov_combination, data.int, df_null_model){
     df <- test_all_models(cov_combination, data.int)
-    addSelectionSheet(wb, sheet_name = cov_combination[[1]], df = df, datasets_nb=length(data.int$y))
+    addSelectionSheet(wb, sheet_name = cov_combination[[1]], df = bind_rows(df_null_model, df), datasets_nb=length(data.int$y))
   }
   # Create a new workbook
   wb <- createWorkbook()
   
+  df_null_model <- test_all_models("1", data.int)
   # Fill the workbook
-  map(c(list(list("1")), models_to_test), ~ test_and_write_models(cov_combination = .x, data.int = data.int))
+  map(models_to_test, ~ test_and_write_models(cov_combination = .x, data.int = data.int, df_null_model))
   
   # Save the workbook
   file_path <- paste0("3.results/model_selection/", 
@@ -65,7 +66,10 @@ test_quad_and_log <- function(data.int, species){
 # ----- Hors repro -----
 species_list <- c("sterne caugek", "goeland leucophee", "petit puffin", "mouette pygmee", 
                    "mouette melanocephale", "puffin de scopoli")
-species_list <- c("goeland_leucophee_HR", "goeland_leucophee_R")                
+species_list <- migralion_obs %>%
+  filter(!is.na(species_name)) %>%
+  pull(species_name) %>%
+  unique()
 # species_list <- c("oceanite tempete", "fou de bassan")
 
 # migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
