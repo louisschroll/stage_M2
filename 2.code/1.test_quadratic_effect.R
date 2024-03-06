@@ -23,7 +23,7 @@ source("2.code/format_data_for_spOccupancy.R")
 source("2.code/model_selection_functions.R")
 
 # load data
-load("1.data/all_seabirds_counts.rdara")
+load("1.data/all_seabirds_counts.rdata")
 load("1.data/covariates_data.rdata")
 
 grid <- covariates_data %>% 
@@ -32,14 +32,10 @@ grid <- covariates_data %>%
 
 test_quad_and_log <- function(data.int, species){
   
-  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST",
-                        "mean_summer_SST", "mean_autumn_SST",
-                        #"sd_winter_SST", "sd_spring_SST",
-                        #"sd_summer_SST", "sd_autumn_SST",
-                        "mean_SST", "sd_SST",
-                        "concavity", "slope", "dist_to_shore",
-                        "bathymetry",
-                        "mean_CHL", "mean_VEL", "sd_VEL"))
+  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", 
+                        "mean_autumn_SST", "mean_SST", "sd_SST", "concavity", 
+                        "dist_to_shore", "bathymetry",
+                        "mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
@@ -64,16 +60,11 @@ test_quad_and_log <- function(data.int, species){
 }
 
 # ----- Hors repro -----
-species_list <- c("sterne caugek", "goeland leucophee", "petit puffin", "mouette pygmee", 
-                   "mouette melanocephale", "puffin de scopoli")
 species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
-  unique()
-# species_list <- c("oceanite tempete", "fou de bassan")
-
-# migralion_obs2 <- migralion_obs %>% filter(session != "prenup_2022")
-# migralion_eff2 <- migralion_eff %>% filter(session != "prenup_2022")
+  unique() %>% 
+  str_subset("HR", negate = F)
 
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
