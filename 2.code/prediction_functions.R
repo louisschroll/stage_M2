@@ -13,6 +13,7 @@
 
 source("2.code/format_data_for_spOccupancy.R")
 source("2.code/model_selection_functions.R")
+load("1.data/contour_golfe_du_lion.rdata")
 
 predict_distribution <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
   # Wrapper for intPGOcc() function of spOccupancy
@@ -90,13 +91,15 @@ predict_distribution <- function(data.int = NULL, data_list = NULL, grid, specie
     geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
     scale_fill_viridis_c() + 
     labs(title = 'Occupancy') +
-    theme_bw()
+    theme_bw() +
+    geom_sf(data = contour_golfe)
   
   sdpsi <- ggplot() + 
     geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
     scale_fill_viridis_c(option = "B") + 
     labs(title = 'Occupancy SD') +
-    theme_bw()
+    theme_bw() +
+    geom_sf(data = contour_golfe)
   
   return(list(res = model_result, psi = psi, sdpsi = sdpsi))
 }

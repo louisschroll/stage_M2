@@ -14,14 +14,13 @@
 
 cat("\014")              # clear the console
 rm(list = ls())          # remove all variables of the work space
-setwd("/1.data")
 
 # Import packages
 library(terra)
 library(tidyverse)
 
 # Define variables used in the script
-study_area <- ext(3, 6, 42, 43.7) # (xmin, xmax, ymin, ymax)
+study_area <- ext(3, 5.6, 42.25, 43.7) # (xmin, xmax, ymin, ymax)
 
 
 combine_ncfile <- function(path_non_int, path_interim){
@@ -46,7 +45,7 @@ combine_ncfile <- function(path_non_int, path_interim){
 
 
 # ---- Import Sea Surface Temperature (SST) and average by season -----
-raster_sst <- combine_ncfile("copernicus_data/SST.nc", "copernicus_data/SST_int.nc") %>% 
+raster_sst <- combine_ncfile("1.data/copernicus_data/SST.nc", "1.data/copernicus_data/SST_int.nc") %>% 
   terra::crop(study_area) %>% 
   terra::extend(study_area) 
 
@@ -58,7 +57,8 @@ mean_season <- raster_sst %>% as_tibble() %>%
   mutate(season_nb =  ceiling(month_nb/3)) %>% 
   group_by(x, y, season_nb) %>%  
   summarize(mean_value = mean(value, na.rm = TRUE),
-            sd_value = sd(value, na.rm = TRUE)) %>% 
+            sd_value = sd(value, na.rm = TRUE)
+            ) %>% 
   ungroup()
 
 # Plot the raster
@@ -67,7 +67,7 @@ if (FALSE) {
     ggplot(aes(x=x, y=y, fill=mean_value)) +
       geom_raster() +
       facet_wrap(~season_nb) +
-      scale_fill_distiller(palette = "Spectral")
+      scale_fill_distiller(palette = "Spectral") 
 }
 # Create one col for each season and compute all season mean SST
 raster_mean_SST <- mean_season %>% 
@@ -80,6 +80,7 @@ raster_mean_SST <- mean_season %>%
          sd_spring_SST = sd_value_2,
          sd_summer_SST = sd_value_3,
          sd_autumn_SST = sd_value_4) %>% 
+  #select(c(x, y) | starts_with("mean_")) %>% 
   terra::rast(type="xyz", crs="", digits=6, extent=NULL) 
  
 all_SST <- c(app(raster_sst, mean),app(raster_sst, sd)) %>% 
@@ -91,49 +92,51 @@ corrplot::corrplot.mixed(raster_mean_SST %>% as_tibble() %>% cor(method = "pears
 
 # ---- Import and crop static covariates data ----
 
-raster_static_cov <- rast("static_covariates_raster.tif")
+raster_static_cov <- rast("1.data/static_covariates_raster.tif")
 crs(raster_mean_SST) <- crs(raster_static_cov)
 
 # Use resample to have same extent and resolution
 raster_static_cov <- raster_static_cov %>% 
   terra::resample(raster_mean_SST) 
 
+plot(raster_mean_SST[[1:4]])
+plot(raster_static_cov)
 # ---- Import and average the other dynamic covariates ----
 # Salinity (SAL), euphotic zone depth (EZD) and Net primary productivity are
 # excluded because their correlation whith CHL is too high
 # Sea surface heigth (SSH) is too correlated with dist_to_shore and bathymetry
 # And sd(chl) to correlated with mean(chl)
 
-CHL <- combine_ncfile("copernicus_data/CHL.nc", "copernicus_data/CHL_int.nc") 
-#SAL <- combine_ncfile("copernicus_data/SAL.nc", "copernicus_data/SAL_int.nc") 
-#SSH <- combine_ncfile("copernicus_data/SSH.nc", "copernicus_data/SSH_int.nc") 
+CHL <- combine_ncfile("1.data/copernicus_data/CHL.nc", "1.data/copernicus_data/CHL_int.nc") 
+SAL <- combine_ncfile("1.data/copernicus_data/SAL.nc", "1.data/copernicus_data/SAL_int.nc") 
+SSH <- combine_ncfile("1.data/copernicus_data/SSH.nc", "1.data/copernicus_data/SSH_int.nc") 
 
-raster_dynamic_cov <- c(app(CHL, mean)#, app(CHL, sd),
-  #app(SAL, mean), app(SAL, sd),
-  #app(SSH, mean), app(SSH, sd)
+raster_dynamic_cov <- c(app(CHL, mean), app(CHL, sd),
+  app(SAL, mean), app(SAL, sd),
+  app(SSH, mean), app(SSH, sd)
   ) %>% 
   terra::crop(raster_mean_SST) %>% 
   terra::extend(raster_mean_SST) 
 
-VEL <- combine_ncfile("copernicus_data/velocity.nc", "copernicus_data/velocity_int.nc") %>% 
+VEL <- combine_ncfile("1.data/copernicus_data/velocity.nc", "1.data/copernicus_data/velocity_int.nc") %>% 
   terra::resample(raster_mean_SST) 
 
-# EZD <- rast("copernicus_data/euphotic_depth.nc")%>% 
-#   terra::resample(raster_mean_SST) 
-# NPP <- rast("copernicus_data/NPP.nc") %>% 
-#   terra::resample(raster_mean_SST) 
+# EZD <- rast("1.data/copernicus_data/euphotic_depth.nc")%>%
+#   terra::resample(raster_mean_SST)
+# NPP <- rast("1.data/copernicus_data/NPP.nc") %>%
+#   terra::resample(raster_mean_SST)
 raster_dynamic_cov <- c(raster_dynamic_cov, 
                         app(VEL, mean), app(VEL, sd)
-                        #app(EZD, mean), app(EZD, sd),
-                        #app(NPP, mean), app(NPP, sd)
+                        # app(EZD, mean), app(EZD, sd),
+                        # app(NPP, mean), app(NPP, sd)
                         )
 
-names(raster_dynamic_cov) <- c("mean_CHL", #"sd_CHL",
-                               #"mean_SAL", "sd_SAL", 
-                               #"mean_SSH", "sd_SSH", 
+names(raster_dynamic_cov) <- c("mean_CHL", "sd_CHL",
+                               "mean_SAL", "sd_SAL",
+                               "mean_SSH", "sd_SSH",
                                "mean_VEL", "sd_VEL"
-                               #"mean_EZD", "sd_EZD", 
-                               #"mean_NPP", "sd_NPP"
+                               # "mean_EZD", "sd_EZD",
+                               # "mean_NPP", "sd_NPP"
                                )
 plot(raster_dynamic_cov)
 corrplot::corrplot.mixed(raster_dynamic_cov %>% as_tibble() %>% cor(method = "pearson", use = "na.or.complete"))
@@ -151,20 +154,49 @@ corrplot::corrplot.mixed(raster_dynamic_cov %>% as_tibble() %>% cor(method = "pe
 
 # ---- Combine all the rasters ----
 combined_rasters <- c(raster_mean_SST, raster_static_cov, raster_dynamic_cov) 
+plot(combined_rasters)
+
+# cut the area too far offshore
+triangle <- vect(matrix(c(3, 5.7, 3, 3, 42.1, 43.1, 46, 42), ncol = 2), type="polygons", atts=NULL, crs=crs(combined_rasters))
+combined_rasters2 <- mask(x=combined_rasters, mask=triangle)
+if (FALSE){
+  load("1.data/contour_golfe_du_lion.rdata")
+  combined_rasters2 %>% as_tibble() %>% 
+    drop_na() %>% 
+    bind_cols(crds(combined_rasters2)) %>% 
+    ggplot() +
+    geom_raster(aes(x=x, y=y, fill = bathymetry)) +
+    geom_line(aes(x=x, y = 40.8+0.4*x), linewidth = 1) +
+    scale_fill_distiller(palette = "Spectral") +
+    geom_sf(data = contour_golfe %>% st_transform(crs=crs(combined_rasters)))
+}
+
+# Exclude covars that have a correlation coeff > 0.8
+corrplot::corrplot.mixed(combined_rasters2 %>% as_tibble() %>% cor(method = "pearson", use = "na.or.complete"))
+# exclude: mean_automn_SST (cor w/ mean_winter_SST)
+# slope, mean_VEL (cor w/ bathymetry)
+layers_to_keep <- c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
+                    #"sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST",
+                    "mean_SST", "sd_SST", "concavity", #"slope",
+                    "dist_to_shore", "bathymetry", "mean_CHL", 
+                    #"mean_SAL", "mean_VEL", 
+                    "sd_SAL",
+                    "mean_SSH", "sd_SSH",  "sd_VEL")
+
+combined_rasters3 <- combined_rasters2[[c(layers_to_keep)]]
+corrplot::corrplot.mixed(combined_rasters3 %>% as_tibble() %>% cor(method = "pearson", use = "na.or.complete"))
 
 # Add the log values
-log_raster <- log(combined_rasters)
-log_raster$concavity <- combined_rasters$concavity
-log_raster$mean_VEL <- combined_rasters$mean_VEL
-log_raster$bathymetry <- log(-combined_rasters$bathymetry)
+log_raster <- log(combined_rasters3)
+log_raster$concavity <- combined_rasters3$concavity
+log_raster$mean_SSH <- combined_rasters3$mean_SSH
+log_raster$bathymetry <- log(-combined_rasters3$bathymetry)
 names(log_raster) <- paste0("log_", names(log_raster))
 
 
-final_raster <- c(log_raster,combined_rasters) %>% scale()
+final_raster <- c(log_raster,combined_rasters3) %>% scale()
 plot(final_raster)
-#combined_rasters[combined_rasters$bathymetry<(-1200)] <- NA
-plot(combined_rasters)
 
-corrplot::corrplot.mixed(combined_rasters %>% as_tibble() %>% cor(method = "pearson", use = "na.or.complete"))
+# save 
+terra::writeRaster(final_raster, filename = "1.data/all_covariates.tif", overwrite=TRUE)
 
-terra::writeRaster(final_raster, filename = "all_covariates.tif", overwrite=TRUE)

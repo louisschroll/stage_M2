@@ -17,7 +17,7 @@ rm(list = ls())          # remove all variables of the work space
 library(stars)
 library(sf)
 library(tidyverse)
-raster_cov = read_stars("~/stage_M2/1.data/all_covariates.tif")
+raster_cov = read_stars("1.data/all_covariates.tif")
 
 grid_c <- st_make_grid(raster_cov, 
                        cellsize = 0.04,
@@ -32,6 +32,7 @@ covariates_data <- st_sf(grid_c) %>%
   mutate(polygon_values$band) %>% 
   filter(!if_any(mean_winter_SST:sd_VEL, is.na))
 
-plot(covariates_data[10:19])
-save(covariates_data, file = "~/stage_M2/1.data/covariates_data.rdata")
+plot(covariates_data[10:11])
+
+save(covariates_data, file = "1.data/covariates_data.rdata")
 
