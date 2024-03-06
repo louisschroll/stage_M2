@@ -23,7 +23,7 @@ source("2.code/format_data_for_spOccupancy.R")
 source("2.code/model_selection_functions.R")
 
 # load data
-load("1.data/all_seabirds_counts.rdara")
+load("1.data/all_seabirds_counts.rdata")
 load("1.data/covariates_data.rdata")
 
 grid <- covariates_data %>% 
