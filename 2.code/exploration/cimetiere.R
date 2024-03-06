@@ -61,3 +61,31 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
   data$det.covs$transect_name <- matrix(transect_name_list, ncol = length(session_list))
   return(data)
 }
+
+
+
+
+add_session_column <- function(data, min_time_btw_session = 30) {
+  data <- data[order(data$date), ]
+  
+  # Initialize session counter and session labels
+  session_counter <- 0
+  session_labels <- c("A")
+  
+  # Initialize vector to store session labels
+  session_column <- rep(NA, nrow(data))
+  
+  for (i in 1:nrow(data)) {
+    # Check if it's time to start a new session
+    if (i==1 || difftime(data$date[i], data$date[i - 1], units = "days") > min_time_btw_session) {
+      session_counter <- session_counter + 1
+      session_labels <- LETTERS[session_counter]
+    }
+    session_column[i] <- session_labels
+  }
+  
+  # Add the column
+  data$session <- as.factor(session_column)
+  
+  return(data)
+}

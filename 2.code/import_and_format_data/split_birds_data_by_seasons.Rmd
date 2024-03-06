@@ -87,7 +87,12 @@ pnm_obs <- split_periods(pnm_obs, "goeland leucophee",
               session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
               session_HR = c("2019_automne", "2020_automne"))
 
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="goeland leucophee", "goeland_leucophee_HR", species_name))
+pelmed_obs <- split_periods(pelmed_obs, "goeland leucophee", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
+
+# pelmed_obs <- pelmed_obs %>% 
+#   mutate(species_name = ifelse(nom_fr=="goeland leucophee", "goeland_leucophee_R", species_name))
 
 samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
                                                  & nom_fr == "goeland leucophee",
@@ -124,7 +129,9 @@ pnm_obs <- split_periods(pnm_obs, "petit puffin",
               session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
               session_HR = c("2019_automne", "2020_automne"))
 
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="petit puffin", "petit_puffin_HR", species_name))
+pelmed_obs <- split_periods(pelmed_obs, "petit puffin", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
 
 samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
                                                  & nom_fr == "petit puffin",
@@ -188,7 +195,9 @@ pnm_obs <- split_periods(pnm_obs, "sterne caugek",
               session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
               session_HR = c("2019_automne", "2020_automne"))
 
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="sterne caugek", "sterne_caugek_HR", species_name))
+pelmed_obs <- split_periods(pelmed_obs, "sterne caugek", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
 
 samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "sterne caugek",
                                                  "sterne_caugek_HR", species_name))
@@ -226,7 +235,9 @@ pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocepha
                                                     & session %in% c("2019_automne", "2020_automne"), 
                                                     "mouette_melanocephale_HR", species_name))
 
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocephale", "mouette_melanocephale_HR", species_name))
+pelmed_obs <- split_periods(pelmed_obs, "mouette melanocephale", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
 
 samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
                                                  & nom_fr == "mouette melanocephale",

@@ -51,7 +51,7 @@ extract_sampled_cells <- function(data_list, grid = grid){
   nb_of_datasets <- length(data_list)
   
   for (i in 1:nb_of_datasets){
-    sites[[i]] <- find_intersecting_cells(data_list[[i]]$eff, grid)
+    sites[[i]] <- find_intersecting_cells(sampling_points = data_list[[i]]$eff, grid)
   }
   
   IDs <- unique(unlist(sites))
