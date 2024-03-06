@@ -66,7 +66,7 @@ species_list <- migralion_obs %>%
   unique() %>% 
   str_subset("HR", negate = F)
 
-data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+data_list = list(#pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))

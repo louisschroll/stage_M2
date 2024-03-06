@@ -1,5 +1,19 @@
+# HEADER ------------------------------------------------------------------------
+#
+# Script name:  ~/stage_M2/2.code/import_and_format_data/prepare_obs_data.R
+# Author:       Louis Schroll
+# Email:        louis.schroll@ens-lyon.fr
+# Date:         2024-02-06
+#
+# Script description:
+# Prepare the data containing the observations and effort for the analyses.
+# Filter the species of interest, select the relevant colomns, add year and 
+# session columns and homogenize columns and birds name. 
+# -------------------------------------------------------------------------------
 
-rm(list = ls())
+cat("\014")              # clear the console
+rm(list = ls())          # remove all variables of the work space
+
 # load packages
 library(tidyverse)
 library(sf)
@@ -42,32 +56,6 @@ format_name <- function(dataset, crs_ref){
 }
 
 
-add_session_column <- function(data, min_time_btw_session = 30) {
-  data <- data[order(data$date), ]
-  
-  # Initialize session counter and session labels
-  session_counter <- 0
-  session_labels <- c("A")
-  
-  # Initialize vector to store session labels
-  session_column <- rep(NA, nrow(data))
-  
-  for (i in 1:nrow(data)) {
-    # Check if it's time to start a new session
-    if (i==1 || difftime(data$date[i], data$date[i - 1], units = "days") > min_time_btw_session) {
-      session_counter <- session_counter + 1
-      session_labels <- LETTERS[session_counter]
-    }
-    session_column[i] <- session_labels
-  }
-  
-  # Add the column
-  data$session <- as.factor(session_column)
-  
-  return(data)
-}
-
-
 add_session_column2 <- function(data_obs, data_eff) {
   asso_session_date <- unique(data_eff %>% as_tibble %>% select(session, date))
   data_obs$session <- NA
@@ -81,11 +69,12 @@ add_session_column2 <- function(data_obs, data_eff) {
 
 
 # Pelmed 2017 -> 2020
-load("~/stage_M2/1.data/pelmed.rdata")
+load("1.data/pelmed2017_2021.rdata")
+load("1.data/pelmed.rdata")
 
 ref_coordinate_system <- st_crs(pelmed_obs) 
 
-pelmed_obs <- pelmed_obs %>%  
+pelmed_obs <- pelobs %>%  
   select(lat, lon, podSize, transect, routeType, sighting, date, 
          hhmmss, famille_fr, nom_fr, geometry) %>% 
   format_name(ref_coordinate_system) %>%
@@ -99,7 +88,7 @@ pelmed_obs <- pelmed_obs %>%
   rename(effectif = podSize) %>% 
   mutate(session = as.factor(year))
 
-pelmed_eff <- pelmed_eff %>% 
+pelmed_eff <- peleff %>% 
   select(effort, date, hhmmss, seaState, lat, lon, legLengKm, geometry) %>% 
   mutate(year = year(date),
          session = as.factor(year),
@@ -257,7 +246,7 @@ ferme_obs <- efglx %>%
   select("nom_fr", "denombrementMax", "denombrementMin", "jourDateDebut") %>% 
   rename(date = jourDateDebut) %>%
   format_name(ref_coordinate_system) %>% 
-  add_session_column() %>% 
+  #add_session_column() %>% 
   mutate(nom_fr = ifelse(nom_fr=="puffin cendre", "puffin de scopoli", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) 
