@@ -35,7 +35,7 @@ test_quad_and_log <- function(data.int, species){
   cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", 
                         "mean_autumn_SST", "mean_SST", "sd_SST", "concavity", 
                         "dist_to_shore", "bathymetry",
-                        "mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"))
+                        "mean_CHL", "mean_SSH", "sd_SSH", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
@@ -59,14 +59,13 @@ test_quad_and_log <- function(data.int, species){
   print(paste("results are in", file_path))
 }
 
-# ----- Hors repro -----
 species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
-  unique() %>% 
-  str_subset("HR", negate = F)
+  unique()
+ # str_subset("HR", negate = F)
 
-data_list = list(#pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))

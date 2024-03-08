@@ -23,7 +23,7 @@ source("2.code/format_data_for_spOccupancy.R")
 source("2.code/model_selection_functions.R")
 
 # load data
-load("1.data/all_seabirds_counts.rdara")
+load("1.data/all_seabirds_counts.rdata")
 load("1.data/covariates_data.rdata")
 
 grid <- covariates_data %>% 
@@ -31,18 +31,25 @@ grid <- covariates_data %>%
   st_transform(st_crs(pelmed_obs))
 
 test_covariates_blocks <- function(data.int, static_covs, sst_covs, dyn_covs, species){
+  df_null_model <- test_all_models("1", data.int)
   # Static covariates selection
   static_cov_combination <- generateAllCombinations(static_covs)
-  df_static_cov <- test_all_models(static_cov_combination, data.int)
+  static_cov_combination <- static_cov_combination[2:length(static_cov_combination)]
+  df_static_cov <- df_null_model %>% 
+    bind_rows(test_all_models(static_cov_combination, data.int))
 
   # temperature cov selection
   SST_combination <- generateAllCombinations(sst_covs) %>%
-    c(list("mean_SST", c("mean_SST", "sd_SST")))
-  df_SST_cov <- test_all_models(SST_combination, data.int)
+    c(list("mean_SST", "sd_SST", c("mean_SST", "sd_SST")))
+  SST_combination <- SST_combination[2:length(SST_combination)]
+  df_SST_cov <- df_null_model %>% 
+    bind_rows(test_all_models(SST_combination, data.int))
 
   # Dynamic cov selection
   dyn_cov_combination <- generateAllCombinations(dyn_covs) 
-  df_dyn_cov <- test_all_models(dyn_cov_combination, data.int)
+  dyn_cov_combination <- dyn_cov_combination[2:length(dyn_cov_combination)]
+  df_dyn_cov <- df_null_model %>% 
+    bind_rows(test_all_models(dyn_cov_combination, data.int))
   
   # Create a new workbook
   wb <- createWorkbook()
@@ -58,86 +65,75 @@ test_covariates_blocks <- function(data.int, static_covs, sst_covs, dyn_covs, sp
   print(paste("results in", file_path))
 }
 
-# 1. ------ Hors repro --------
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
-species_list <- c("sterne caugek", "goeland leucophee", "petit puffin", "puffin de scopoli")
-                  # "mouette melanocephale", "oceanite tempete")
+species_list <- c("goeland_leucophee_R", "goeland_leucophee_HR")
+
+# species_list <- migralion_obs %>%
+#   filter(!is.na(species_name)) %>%
+#   pull(species_name) %>%
+#   unique() #%>% 
+#  #str_subset("mouette", negate = F)
 
 static_cov_list <- list(
-  sterne_caugek = c("log_dist_to_shore", "concavity", "slope", "log_bathymetry"),
-  goeland_leucophee = c("log_dist_to_shore", "concavity", "log_slope", "log_bathymetry"),
-  petit_puffin = c("log_dist_to_shore", "log_slope", "log_bathymetry"),
-  petit_puffin = c("log_dist_to_shore", "slope", "bathymetry")
+  sterne_caugek_HR = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  sterne_caugek_R = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  
+  goeland_leucophee_HR = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  goeland_leucophee_R = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry"),
+  petit_puffin_R = c("dist_to_shore", "concavity", "log_bathymetry"),
+  
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry"),
+  
+  mouette_melanocephale_HR = c("dist_to_shore", "log_bathymetry"),
+  mouette_melanocephale_R = c("dist_to_shore", "log_bathymetry")
 )
 
 SST_cov_list <- list(
-  sterne_caugek = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
-  goeland_leucophee = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
-  petit_puffin = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
-  grand_puffin = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST")
+  sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  sterne_caugek_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  goeland_leucophee_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  petit_puffin_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  petit_puffin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+
+  mouette_pygmee_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  mouette_melanocephale_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  mouette_melanocephale_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST")
 )
 
 dyn_cov_list <- list(
-  sterne_caugek = c("mean_CHL", "mean_VEL", "log_sd_VEL"),
-  goeland_leucophee = c("mean_CHL", "mean_VEL", "log_sd_VEL"),
-  petit_puffin = c("mean_CHL", "mean_VEL", "log_sd_VEL"),
-  grand_puffin = c("mean_CHL")
+  sterne_caugek_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  sterne_caugek_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  goeland_leucophee_HR = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  goeland_leucophee_R = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  petit_puffin_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "log_sd_SSH", "log_sd_VEL"),
+  petit_puffin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+
+  mouette_pygmee_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"),
+  mouette_melanocephale_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL")
 )
 
 
-for (i in seq_along(species_list)){
-  species <- species_list[i]
+for (species in species_list){
   print(species)
   data.int <- get_data_for_spOccupancy(data_list, grid, species)
   test_covariates_blocks(data.int = data.int, 
-                         static_covs = static_cov_list[[i]], 
-                         sst_covs = SST_cov_list[[i]], 
-                         dyn_covs = dyn_cov_list[[i]], 
+                         static_covs = static_cov_list[[species]], 
+                         sst_covs = SST_cov_list[[species]], 
+                         dyn_covs = dyn_cov_list[[species]], 
                          species = species)
 }
 
-# 1. ------ during repro (summer) --------
-# data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
-#                  samm = list(obs = samm_obs, eff = samm_eff),
-#                  pnm = list(obs = pnm_obs, eff = pnm_eff),
-#                  migralion = list(obs = migralion_obs, eff = migralion_eff))
-# 
-# species_list <- c("sterne caugek", "goeland leucophee", "puffin yelkouan")
-# # "mouette melanocephale", "puffin de scopoli", "oceanite tempete",
-# # "mouette pygmee")
-# 
-# static_cov_list <- list(
-#   sterne_caugek = c("log_dist_to_shore", "concavity", "slope", "bathymetry"),
-#   goeland_leucophee = c("dist_to_shore", "concavity", "slope + I(slope)^2", "bathymetry"),
-#   puffin_yelkouan = c("dist_to_shore", "concavity", "slope", "bathymetry")
-# )
-# 
-# SST_cov_list <- list(
-#   sterne_caugek = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
-#                     "sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST"),
-#   goeland_leucophee = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
-#                         "sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST"),
-#   puffin_yelkouan = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
-#                       "sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST")
-# )
-# 
-# dyn_cov_list <- list(
-#   sterne_caugek = c("mean_CHL", "mean_VEL", "log_sd_VEL"),
-#   goeland_leucophee = c("mean_CHL", "mean_VEL", "sd_VEL"),
-#   puffin_yelkouan = c("mean_CHL", "mean_VEL", "sd_VEL")
-# )
-# 
-# 
-# for (i in seq_along(species_list)){
-#   species <- species_list[i]
-#   data.int <- get_data_for_spOccupancy(data_list, grid, species)
-#   test_covariates_blocks(data.int = data.int, 
-#                          static_covs = static_cov_list[[i]], 
-#                          sst_covs = SST_cov_list[[i]], 
-#                          dyn_covs = dyn_cov_list[[i]], 
-#                          species = species)
-# }

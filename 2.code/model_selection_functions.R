@@ -44,7 +44,7 @@ test_all_models <- function(cov_combination, data.int){
     rename(model = value) %>% 
     bind_cols(comparison_df) 
   
-  if (selected_cov != "1"){
+  if (any(selected_cov != "1")){
     beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
       pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
       select(-model)
@@ -55,7 +55,7 @@ test_all_models <- function(cov_combination, data.int){
 }
 
 
-run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
+run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_model="exponential"){
   # Wrapper for intPGOcc() function of spOccupancy
   # data.int: a list containing the data with the correct format for intPGOcc()
   # selected_cov: a character vector with the covariates to include in the model
@@ -102,9 +102,8 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
     dist.int <- dist(data.int$coords)
     min.dist <- min(dist.int)
     max.dist <- max(dist.int)
-    # Exponential covariance model
-    cov.model <- "exponential"
-    inits.list <- list(alpha = as.list(rep(0,nb_datasets)),
+
+        inits.list <- list(alpha = as.list(rep(0,nb_datasets)),
                        beta = 0, 
                        z = rep(1, total_sites_nb), 
                        sigma.sq = 2,
@@ -117,9 +116,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                        phi.unif = c(3 / max.dist, 3 / min.dist))
     
     batch.length <- 25
-    n.batch <- 320
-    n.burn <- 2000
-    n.thin <- 10
+    n.batch <- 360
+    n.burn <- 1500
+    n.thin <- 3
     tuning <- list(phi = .2)
     model_result <- spIntPGOcc(occ.formula = occ.formula, 
                              det.formula = det.formula, 
@@ -127,14 +126,18 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                              inits = inits.list, 
                              priors = prior.list, 
                              tuning = tuning, 
-                             cov.model = cov.model, 
-                             NNGP = TRUE, 
+                             cov.model = spatial_model, 
+                             NNGP = T, 
                              n.neighbors = 5, 
                              n.batch = n.batch, 
                              n.burn = n.burn, 
                              n.chains = 3,
                              batch.length = batch.length, 
-                             n.report = 200) 
+                             n.report = 200,
+                             k.fold = 6, 
+                             k.fold.threads = 6,
+                             k.fold.only = FALSE,
+                             k.fold.seed = 42) 
   }
   return(model_result)
 }
@@ -155,12 +158,12 @@ get_model_stat <- function(model_result){
   
   convergence_df <- tibble(rhat_max = NA, ESS_min=NA)
   # Convergence: Rhat & ESS
-  convergence_df$rhat_max <- model_result$rhat %>% unlist() %>% max() %>% round(3)
-  convergence_df$ESS_min <- model_result$ESS %>% unlist() %>% min() %>% round(1)
+  convergence_df$rhat_max <- model_result$rhat %>% unlist() %>% max(na.rm=T) %>% round(3)
+  convergence_df$ESS_min <- model_result$ESS %>% unlist() %>% min(na.rm=T) %>% round(1)
   
   # Bayesian p-value
-  ppc.out.1 <- ppcOcc(model_result, 'freeman-tukey', group = 1)
-  ppc.out.2 <- ppcOcc(model_result, 'freeman-tukey', group = 2)
+  ppc.out.1 <- ppcOcc(model_result, 'chi-squared', group = 1)
+  ppc.out.2 <- ppcOcc(model_result, 'chi-squared', group = 2)
   
   nb_datasets <- length(ppc.out.1$fit.y)
   pvalue_df <- tibble(gr1 = compute_bayesian_pvalue(ppc.out.1), 
@@ -219,13 +222,15 @@ get_beta_values <- function(model_result, selected_cov, model_nb){
     select(all_of(selected_cov)) %>% 
     summarise_all(mean) %>% 
     pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "beta") %>% 
-    mutate(model = model_nb)
+    mutate(model = model_nb,
+           beta = round(beta, 2)) 
   
   sd_beta <- model_result$beta.samples %>% as_tibble() %>% 
     select(all_of(selected_cov)) %>% 
     summarise_all(sd) %>% 
     pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "sd_beta") %>% 
-    mutate(model = model_nb)
+    mutate(model = model_nb,
+           sd_beta = round(sd_beta, 2))
   
   return(mean_beta %>% 
     full_join(sd_beta, by = join_by(covar, model)))

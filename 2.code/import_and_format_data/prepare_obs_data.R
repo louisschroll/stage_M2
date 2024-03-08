@@ -92,7 +92,8 @@ pelmed_eff <- peleff %>%
   select(effort, date, hhmmss, seaState, lat, lon, legLengKm, geometry) %>% 
   mutate(year = year(date),
          session = as.factor(year),
-         transect_name = 1:nrow(.))
+         transect_name = 1:nrow(.)) %>% 
+  st_transform(crs = ref_coordinate_system)
 
 
 # SAMM 2011/2012 - 2018-2019

@@ -24,7 +24,7 @@ source("~/stage_M2/2.code/format_data_for_spOccupancy.R")
 source("~/stage_M2/2.code/model_selection_functions.R")
 
 # load data
-load("~/stage_M2/1.data/all_seabirds_counts.rdara")
+load("~/stage_M2/1.data/all_seabirds_counts.rdata")
 load("~/stage_M2/1.data/covariates_data.rdata")
 
 grid <- covariates_data %>% 
@@ -52,39 +52,72 @@ test_blocks_assemblage <- function(data.int, best_static_covs, best_dyn_covs, be
   print(paste("Results in", file_path))
 }
 
-# ----- Hors repro -----
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
-species_list <- c("sterne caugek", "goeland leucophee")
-                  #"puffin yelkouan", "mouette pygmee"
-# "mouette melanocephale", "puffin de scopoli", "oceanite tempete",
-# "mouette pygmee")
+species_list <- migralion_obs %>%
+  filter(!is.na(species_name)) %>%
+  pull(species_name) %>%
+  unique() %>% 
+  str_subset("sterne", negate = T) %>% 
+  str_subset("goeland", negate = T)
 
 best_static_covs <- list(
-  sterne_caugek = c("log_dist_to_shore", "log_bathymetry"),
-  goeland_leucophee = c("log_dist_to_shore", "log_bathymetry"),
-  puffin_yelkouan = c("dist_to_shore", "concavity", "slope", "bathymetry")
+  sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry"),
+  sterne_caugek_R = c("log_bathymetry"),
+  
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry"),
+  goeland_leucophee_R = c("log_dist_to_shore", "log_bathymetry"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry"),
+  petit_puffin_R = c("dist_to_shore", "concavity"),
+  
+  mouette_melanocephale_HR = c("dist_to_shore"),
+  mouette_melanocephale_R = c("log_bathymetry"),
+
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry")
 )
 
 best_SST_covs <- list(
-  sterne_caugek = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
-  goeland_leucophee = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
-  puffin_yelkouan = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
-                      "sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST")
+  sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  goeland_leucophee_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  goeland_leucophee_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  petit_puffin_HR = c("mean_winter_SST", "mean_autumn_SST"),
+  petit_puffin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  mouette_melanocephale_HR = c("mean_winter_SST", "mean_autumn_SST"),
+  mouette_melanocephale_R = c("mean_SST"),
+  
+  mouette_pygmee_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
 )
 
 best_dyn_covs <- list(
-  sterne_caugek = c("mean_CHL", "log_sd_VEL"),
-  goeland_leucophee = c("mean_CHL", "mean_VEL"),
-  puffin_yelkouan = c("mean_CHL", "mean_VEL", "sd_VEL")
-)
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH"),
+  sterne_caugek_R = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  goeland_leucophee_HR = c("mean_CHL"),
+  goeland_leucophee_R = c("mean_CHL"),
 
-for (i in seq_along(species_list)){
-  species <- species_list[i]
+  petit_puffin_HR = c("mean_CHL", "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "sd_SAL", "log_sd_VEL"),
+  
+  mouette_melanocephale_HR = c("mean_CHL", "sd_SAL"),
+  mouette_melanocephale_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
+  
+  mouette_pygmee_HR = c("sd_SAL", "log_sd_VEL")
+  )
+
+for (species in species_list){
+  print(species)
   data.int <- get_data_for_spOccupancy(data_list, grid, species)
-  test_blocks_assemblage(data.int, best_static_covs[[i]], best_dyn_covs[[i]], best_SST_covs[[i]], species)
+  test_blocks_assemblage(data.int = data.int, 
+                         best_static_covs = best_static_covs[[species]], 
+                         best_dyn_covs = best_dyn_covs[[species]], 
+                         best_SST_covs = best_SST_covs[[species]], 
+                         species = species)
 }
 

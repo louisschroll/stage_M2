@@ -253,3 +253,94 @@ save(pelmed_obs, pelmed_eff,
      file = "~/stage_M2/1.data/all_seabirds_counts.rdata")
 ```
 
+
+## Scopoli's shearwater / Puffin de Scopoli
+
+Presence: y-round mais hivernage au large
+
+Reproduction: avril - mai à sptembre-octobre
+
+**Split data:**
+
+  - **During repro: **
+  
+  - **Outside repro: **
+
+
+```{r}
+species <- "puffin de scopoli"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+
+## Horned puffin / Macareux moine
+
+Presence: 
+
+Reproduction: 
+
+**Split data:**
+
+  - **During repro: **
+  
+  - **Outside repro: **
+  
+
+```{r}
+species <- "macareux moine"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+
+
+## Common tern / Sterne pierregarin
+
+Presence: 
+
+Reproduction: avril à juillet
+
+**Split data:**
+
+  - **During repro: **
+  
+  - **Outside repro: **
+
+
+```{r}
+species <- "sterne pierregarin"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+
+
+## Storm petrel / Oceanite tempete
+
+Presence: 
+
+Reproduction: mai à fin juillet
+
+**Split data:**
+
+  - **During repro: **
+  
+  - **Outside repro: **
+  
+
+```{r}
+species <- "oceanite tempete"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+

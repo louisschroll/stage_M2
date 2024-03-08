@@ -15,7 +15,7 @@ source("2.code/format_data_for_spOccupancy.R")
 source("2.code/model_selection_functions.R")
 load("1.data/contour_golfe_du_lion.rdata")
 
-predict_distribution <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
+run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
   # Wrapper for intPGOcc() function of spOccupancy
   # data_list:
   # selected_cov: a character vector with the covariates to include in the model
@@ -77,12 +77,27 @@ predict_distribution <- function(data.int = NULL, data_list = NULL, grid, specie
                  n.thin = n.thin, 
                  n.chains = n.chains)
   }
+  
+  
+  
+  return(list(res = model_result, psi = psi, sdpsi = sdpsi))
+}
+
+
+predict_distribution <- function(model_result, grid, add_spatial=F){
   grid_pred <- grid %>% 
     as_tibble() %>% 
     select(all_of(selected_cov))
   
   X.0 <- cbind(1, grid_pred)
-  out.int.pred <- predict(model_result, as.matrix(X.0))
+  
+  if (add_spatial){
+    coords.0 <- get_coords(grid)
+    out.int.pred <- predict(model_result, as.matrix(X.0), coords.0)
+  }
+  else {
+    out.int.pred <- predict(model_result, as.matrix(X.0))
+  }
   
   mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
   sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
@@ -101,7 +116,5 @@ predict_distribution <- function(data.int = NULL, data_list = NULL, grid, specie
     theme_bw() +
     geom_sf(data = contour_golfe)
   
-  return(list(res = model_result, psi = psi, sdpsi = sdpsi))
+  return(list(psi = psi, sdpsi = sdpsi))
 }
-
-
