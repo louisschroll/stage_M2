@@ -70,29 +70,13 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
-species_list <- c("goeland_leucophee_R", "goeland_leucophee_HR")
-
 # species_list <- migralion_obs %>%
 #   filter(!is.na(species_name)) %>%
 #   pull(species_name) %>%
-#   unique() #%>% 
-#  #str_subset("mouette", negate = F)
+#   unique() %>%
+#   str_subset("goeland", negate = T)
 
-static_cov_list <- list(
-  sterne_caugek_HR = c("log_dist_to_shore", "concavity", "log_bathymetry"),
-  sterne_caugek_R = c("log_dist_to_shore", "concavity", "log_bathymetry"),
-  
-  goeland_leucophee_HR = c("log_dist_to_shore", "concavity", "log_bathymetry"),
-  goeland_leucophee_R = c("log_dist_to_shore", "concavity", "log_bathymetry"),
-  
-  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry"),
-  petit_puffin_R = c("dist_to_shore", "concavity", "log_bathymetry"),
-  
-  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry"),
-  
-  mouette_melanocephale_HR = c("dist_to_shore", "log_bathymetry"),
-  mouette_melanocephale_R = c("dist_to_shore", "log_bathymetry")
-)
+species_list <- c("puffin_de_scopoli_R",      "sterne_caugek_HR" ,        "mouette_melanocephale_HR", "petit_puffin_HR")
 
 SST_cov_list <- list(
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
@@ -103,19 +87,56 @@ SST_cov_list <- list(
   
   petit_puffin_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
   petit_puffin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
-
+  
   mouette_pygmee_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
   
   mouette_melanocephale_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
-  mouette_melanocephale_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST")
+  mouette_melanocephale_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  fou_de_bassan_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  oceanite_tempete = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  mouette_rieuse_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  puffin_de_scopoli_R = c("mean_winter_SST", "I(mean_winter_SST)^2", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST")
 )
+
+static_cov_list <- list(
+  sterne_caugek_HR = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  sterne_caugek_R = c("log_dist_to_shore", "concavity", "log_bathymetry"),
+  
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry"),
+  goeland_leucophee_R = c("log_dist_to_shore", "log_bathymetry"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry"),
+  petit_puffin_R = c("dist_to_shore", "concavity", "log_bathymetry"),
+  
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry"),
+  
+  mouette_melanocephale_HR = c("dist_to_shore", "log_bathymetry"),
+  mouette_melanocephale_R = c("dist_to_shore", "log_bathymetry"),
+  
+  fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
+  
+  sterne_pierregarin_R = c("dist_to_shore", "log_bathymetry"),
+  
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry"),
+  
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry"),
+  
+  puffin_de_scopoli_R = c("dist_to_shore", "log_bathymetry")
+)
+
 
 dyn_cov_list <- list(
   sterne_caugek_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   sterne_caugek_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  goeland_leucophee_HR = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
-  goeland_leucophee_R = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  goeland_leucophee_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  goeland_leucophee_R = c("mean_CHL", "sd_SAL", "mean_SSH", "log_sd_SSH", "log_sd_VEL"),
   
   petit_puffin_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "log_sd_SSH", "log_sd_VEL"),
   petit_puffin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
@@ -123,7 +144,17 @@ dyn_cov_list <- list(
   mouette_pygmee_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
   mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"),
-  mouette_melanocephale_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL")
+  mouette_melanocephale_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"),
+  
+  fou_de_bassan_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "log_sd_SSH", "log_sd_VEL"),
+  
+  sterne_pierregarin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  oceanite_tempete = c("mean_CHL", "sd_SAL", "log_mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  mouette_rieuse_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL")
 )
 
 

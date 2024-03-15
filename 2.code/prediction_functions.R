@@ -34,8 +34,8 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
     n.thin <- 5
     n.chains <- 3
     if (nb_datasets>1){
-      inits.list <- list(alpha = as.list(rep(0, nb_datasets)),
-                         beta = 0, 
+      inits.list <- list(alpha = as.list(rep(runif(1), nb_datasets)),
+                         beta = runif(length(selected_cov)+1), 
                          z = rep(1, total_sites_nb))
       
       prior.list <- list(beta.normal = list(mean = 0, var = 2.72), 
@@ -59,8 +59,8 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
                  occ.covs = data.int$occ.covs,
                  det.covs = data.int$det.covs[[1]])
     
-    inits.list <- list(alpha = 0, 
-                       beta = 0, 
+    inits.list <- list(alpha = rnorm(length(selected_cov)), 
+                       beta = rnorm(1), 
                        z = apply(data$y, 1, max, na.rm = TRUE))
     
     prior.list <- list(alpha.normal = list(mean = 0, var = 2.72), 
@@ -78,18 +78,20 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
                  n.chains = n.chains)
   }
   
+  predictive_map <- make_predictive_map(model_result, grid, selected_cov)
   
-  
-  return(list(res = model_result, psi = psi, sdpsi = sdpsi))
+  return(list(res = model_result, psi = predictive_map$psi, sdpsi = predictive_map$sdpsi))
 }
 
 
-predict_distribution <- function(model_result, grid, add_spatial=F){
+make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F){
   grid_pred <- grid %>% 
     as_tibble() %>% 
     select(all_of(selected_cov))
   
-  X.0 <- cbind(1, grid_pred)
+  intercept <- mean(model_result$beta.samples[,1])
+  
+  X.0 <- cbind(intercept, grid_pred)
   
   if (add_spatial){
     coords.0 <- get_coords(grid)
@@ -104,17 +106,31 @@ predict_distribution <- function(model_result, grid, add_spatial=F){
   
   psi <- ggplot() + 
     geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
-    scale_fill_viridis_c() + 
-    labs(title = 'Occupancy') +
+    scale_fill_viridis_c(guide = guide_colorbar(ticks = FALSE,
+                                                barwidth = 6,
+                                                barheight = 0.75)) +
+    labs(title = "Utilisation de l'espace",
+         fill = "Probabilité\nde présence") +
     theme_bw() +
-    geom_sf(data = contour_golfe)
+    geom_sf(data = contour_golfe) +
+    theme(plot.title = element_text(size = 10),
+          legend.position = "bottom",
+          legend.title = element_text(size = 9),
+          axis.text = element_text(size = 8))
   
   sdpsi <- ggplot() + 
     geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
-    scale_fill_viridis_c(option = "B") + 
-    labs(title = 'Occupancy SD') +
+    scale_fill_viridis_c(option = "B", guide = guide_colorbar(ticks = FALSE,
+                                                              barwidth = 6,
+                                                              barheight = 0.75)) + 
+    labs(title = "Incertitude sur la probabilité de présence",
+         fill = "SD") +
     theme_bw() +
-    geom_sf(data = contour_golfe)
+    geom_sf(data = contour_golfe) +
+    theme(plot.title = element_text(size = 10),
+          legend.position = "bottom",
+          legend.title = element_text(size = 9),
+          axis.text = element_text(size = 8))
   
   return(list(psi = psi, sdpsi = sdpsi))
 }

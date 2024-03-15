@@ -89,3 +89,15 @@ add_session_column <- function(data, min_time_btw_session = 30) {
   
   return(data)
 }
+
+
+
+
+addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
+  # Add the models with a quadratic effect on a selected covariates to the models
+  # list
+  new_combination <- map(cov_combi_list, function(x) x <- c(x, paste0("I(",quadratic_cov,")^2"))) %>% 
+    purrr::keep(function(x) quadratic_cov %in% x)
+  
+  return(c(cov_combi_list, new_combination))
+}

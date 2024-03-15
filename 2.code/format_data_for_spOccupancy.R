@@ -135,7 +135,8 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
   #ii = 1
   for (S in session_list){
     intersect_eff_session <- intersect_eff %>% filter(session == S) #st_intersection(eff_data_y, occurence_df) 
-    df_transect_length <- tibble(id = intersect_eff_session$id_data, len = st_length(intersect_eff_session)) %>% 
+    df_transect_length <- tibble(id = intersect_eff_session$id_data, 
+                                 len = st_length(intersect_eff_session)) %>% 
       group_by(id) %>% 
       summarise(total_length = sum(len))
     

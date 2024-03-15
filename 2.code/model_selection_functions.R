@@ -12,46 +12,54 @@
 #
 # ------------------------------------------------------------------------------
 
-# Load packages
-# library(tidyverse)
-# library(spOccupancy)
-
-addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
-  # Add the models with a quadratic effect on a selected covariates to the models
-  # list
-  new_combination <- map(cov_combi_list, function(x) x <- c(x, paste0("I(",quadratic_cov,")^2"))) %>% 
-    purrr::keep(function(x) quadratic_cov %in% x)
-  
-  return(c(cov_combi_list, new_combination))
-}
-
 
 test_all_models <- function(cov_combination, data.int){
   model_nb <- length(cov_combination)
-  comparison_df <- tibble()
-  beta_value_df <- tibble()
-  for (i in seq_along(cov_combination)){
-    print(paste("Testing model", i, "/", model_nb))
-    selected_cov = cov_combination[[i]]
-    model_result <- run_int_model(data.int, selected_cov)
-    comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
-    beta_value_df <- beta_value_df %>% bind_rows(get_beta_values(model_result,selected_cov, model_nb=i))
-  }
-  
-  comparison_df <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
+  model_names <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
     unlist() %>% 
     as_tibble() %>% 
-    rename(model = value) %>% 
-    bind_cols(comparison_df) 
+    rename(model = value)
   
-  if (any(selected_cov != "1")){
-    beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
-      pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
-      select(-model)
-    
-    comparison_df <- bind_cols(comparison_df, beta_df_completed)
+  # Run models with spOccupancy
+  model_result_list <- map(cov_combination, function(x){run_int_model(data.int, selected_cov = x)})
+  
+  # Retrieve statistics (Rhat, ESS, pvalues, WAIC, CV) for each model
+  comparison_df <- model_names %>%
+    bind_cols(map_dfr(model_result_list, ~{
+                 get_model_stat(model_result = .x)}))
+  
+  # for (i in seq_along(cov_combination)){
+  #   print(paste("Testing model", i, "/", model_nb))
+  #   selected_cov = cov_combination[[i]]
+  #   model_result <- run_int_model(data.int, selected_cov)
+  #   comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
+  #   beta_value_df <- beta_value_df %>% bind_rows(get_beta_values(model_result,selected_cov, model_nb=i))
+  # }
+  # 
+  # comparison_df <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
+  #   unlist() %>% 
+  #   as_tibble() %>% 
+  #   rename(model = value) %>% 
+  #   bind_cols(comparison_df) 
+  
+  if (any(unlist(cov_combination) != "1")){
+    # beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
+    #   pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
+    #   select(-model)
+  # Retrieve values of coefficients beta
+  beta_value_df <- map_dfr(model_result_list, ~{
+    model_result <- .x
+    selected_cov <- model_result$beta.samples %>% as_tibble() %>% colnames()
+    get_beta_values(model_result, selected_cov[-1], 
+                    model_nb=paste(selected_cov[-1], 
+                                   collapse ="+"))}) %>% 
+    complete(covar, model, fill = list(beta = NA)) %>% 
+    pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
+    select(-model)
+  
+    comparison_df <- bind_cols(comparison_df, beta_value_df)
   }
-  return(comparison_df)
+  return(list(comparison_df = comparison_df, model_result_list = model_result_list))
 }
 
 
@@ -77,9 +85,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_mod
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 9000
-    n.burn <- 1500
-    n.thin <- 3
+    n.samples <- 900
+    n.burn <- 150
+    n.thin <- 1
     
     model_result <- intPGOcc(occ.formula = occ.formula,
                              det.formula = det.formula, 
@@ -143,6 +151,53 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_mod
 }
 
 
+run_non_int_model <- function(data, selected_cov){
+  # Wrapper for intPGOcc() function of spOccupancy
+  # data: a list containing the data with the correct format for intPGOcc()
+  # selected_cov: a character vector with the covariates to include in the model
+  
+  occ.formula <- writeFormula(selected_cov)
+  
+  total_sites_nb <- nrow(data$occ.covs)
+  det.formula <- ~ scale(transect_length) + session
+  
+  n.samples <- 9000
+  n.burn <- 1500
+  n.thin <- 3
+    
+  data <- list(y = data$y[[1]], 
+                 occ.covs = data$occ.covs,
+                 det.covs = data$det.covs[[1]])
+    
+  inits.list <- list(alpha = 0, 
+                       beta = 0, 
+                       z = apply(data$y, 1, max, na.rm = TRUE))
+    
+  prior.list <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                       beta.normal = list(mean = 0, var = 2.72))
+    
+    
+  model_result <- PGOcc(occ.formula = occ.formula,
+                             det.formula = det.formula, 
+                             data = data,
+                             inits = inits.list,
+                             n.samples = n.samples, 
+                             priors = prior.list, 
+                             n.omp.threads = 1, 
+                             verbose = FALSE, 
+                             n.report = 2000, 
+                             n.burn = n.burn, 
+                             n.thin = n.thin, 
+                             n.chains = 2,
+                             k.fold = 6, 
+                             k.fold.threads = 6,
+                             k.fold.only = FALSE,
+                             k.fold.seed = 42)
+
+  return(model_result)
+}
+
+
 writeFormula <- function(covars){
   # covars : a character vector specifying the covariates/predictors
   as.formula(paste("~ ", paste(covars, collapse = " + ")))
@@ -165,7 +220,8 @@ get_model_stat <- function(model_result){
   ppc.out.1 <- ppcOcc(model_result, 'chi-squared', group = 1)
   ppc.out.2 <- ppcOcc(model_result, 'chi-squared', group = 2)
   
-  nb_datasets <- length(ppc.out.1$fit.y)
+  len <- length(ppc.out.1$fit.y)
+  nb_datasets <- ifelse(len<=4, len, 1)
   pvalue_df <- tibble(gr1 = compute_bayesian_pvalue(ppc.out.1), 
                       gr2 = compute_bayesian_pvalue(ppc.out.2)) %>% 
     pivot_longer(everything()) %>% 
@@ -174,6 +230,7 @@ get_model_stat <- function(model_result){
     
   # WAIC
   waic_df <- waicOcc(model_result) %>% 
+    bind_rows() %>% 
     select(WAIC) %>% 
     round(0) %>% 
     mutate(name = paste0("waic_d",1:nrow(.))) %>% 
@@ -190,10 +247,10 @@ get_model_stat <- function(model_result){
 }
 
 
-compute_bayesian_pvalue <- function(ppc.out, isIntegrated = TRUE){
+compute_bayesian_pvalue <- function(ppc.out){
   # Compute baysian p-values with the result of ppcOcc function (spOccupancy)
   # Output: a numeric vector containing one p-value for each data set
-  if (isIntegrated){
+  if (length(ppc.out$fit.y)>1 & length(ppc.out$fit.y)<=4){
     obs_values <- ppc.out$fit.y
     sim_values <- ppc.out$fit.y.rep
     pvalues <- lapply(seq_along(obs_values), function(i) {
@@ -280,7 +337,32 @@ addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
     min_value <- df %>% pull(all_of(cols)) %>% min()
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
                           type = "expression", 
-                          rule = paste0("<", min_value+5),
+                          rule = paste0("<", min_value+3),
                           style = createStyle(fontColour = "lightpink", textDecoration = "bold"))
   }
+}
+
+
+get_dataset_names <- function(data_list, species){
+  # Get the names of datasets containing obsevations of the species
+  # data_list: a list of the data sets, each subdivided in a sub-list of effort 
+  # and observation
+  # species: a character
+  # output: a character vector indicating data sets names
+  map(data_list, ~ filter_one_dataset(.x, species)) %>% 
+    compact() %>% 
+    names()
+}
+
+
+save_maps_as_pdf <- function(maps_list, path_to_save){
+  pdf(path_to_save)
+  for (i in seq_along(maps_list)){
+    plot <- plot_grid(plotlist = maps_list[[i]], nrow = 2,
+                      labels = names(maps_list)[i], #%>% str_to_upper(), 
+                      label_y = 1, label_x = -0.4,
+                      scale = 0.92)
+    print(plot)
+  }
+  dev.off() 
 }
