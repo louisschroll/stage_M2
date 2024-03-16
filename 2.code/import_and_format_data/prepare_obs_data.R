@@ -84,7 +84,8 @@ pelmed_obs <- pelobs %>%
   mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>%
+  mutate(nom_fr = ifelse(nom_fr=="oceanite ind", "oceanite tempete", nom_fr)) %>%
   rename(effectif = podSize) %>% 
   mutate(session = as.factor(year))
 
@@ -92,7 +93,8 @@ pelmed_eff <- peleff %>%
   select(effort, date, hhmmss, seaState, lat, lon, legLengKm, geometry) %>% 
   mutate(year = year(date),
          session = as.factor(year),
-         transect_name = 1:nrow(.))
+         transect_name = 1:nrow(.)) %>% 
+  st_transform(crs = ref_coordinate_system)
 
 
 # SAMM 2011/2012 - 2018-2019
@@ -119,6 +121,7 @@ samm_obs <- birdsamm %>%
   mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
   mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>%
   mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
+  mutate(nom_fr = ifelse(nom_fr=="oceanite ind", "oceanite tempete", nom_fr)) %>%
   add_session_column2(samm_eff)
 
 # PNM Golfe du Lion

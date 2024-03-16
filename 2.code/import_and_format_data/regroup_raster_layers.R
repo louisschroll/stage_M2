@@ -157,7 +157,7 @@ combined_rasters <- c(raster_mean_SST, raster_static_cov, raster_dynamic_cov)
 plot(combined_rasters)
 
 # cut the area too far offshore
-triangle <- vect(matrix(c(3, 5.7, 3, 3, 42.1, 43.1, 46, 42), ncol = 2), type="polygons", atts=NULL, crs=crs(combined_rasters))
+triangle <- vect(matrix(c(3, 5.7, 3, 3, 42.1, 43.1, 46, 42.1), ncol = 2), type="polygons", atts=NULL, crs=crs(combined_rasters))
 combined_rasters2 <- mask(x=combined_rasters, mask=triangle)
 if (FALSE){
   load("1.data/contour_golfe_du_lion.rdata")
@@ -166,16 +166,18 @@ if (FALSE){
     bind_cols(crds(combined_rasters2)) %>% 
     ggplot() +
     geom_raster(aes(x=x, y=y, fill = bathymetry)) +
-    geom_line(aes(x=x, y = 40.8+0.4*x), linewidth = 1) +
+    #geom_line(aes(x=x, y = 40.8+0.4*x), linewidth = 1) +
     scale_fill_distiller(palette = "Spectral") +
-    geom_sf(data = contour_golfe %>% st_transform(crs=crs(combined_rasters)))
+    geom_sf(data = contour_golfe %>% st_transform(crs=crs(combined_rasters))) +
+    geom_sf(data = migralion_eff)
 }
 
 # Exclude covars that have a correlation coeff > 0.8
 corrplot::corrplot.mixed(combined_rasters2 %>% as_tibble() %>% cor(method = "pearson", use = "na.or.complete"))
 # exclude: mean_automn_SST (cor w/ mean_winter_SST)
 # slope, mean_VEL (cor w/ bathymetry)
-layers_to_keep <- c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
+# mean_autumn_SST cor w/ mean_winter_SST
+layers_to_keep <- c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", #"mean_autumn_SST",
                     #"sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST",
                     "mean_SST", "sd_SST", "concavity", #"slope",
                     "dist_to_shore", "bathymetry", "mean_CHL", 
@@ -199,4 +201,3 @@ plot(final_raster)
 
 # save 
 terra::writeRaster(final_raster, filename = "1.data/all_covariates.tif", overwrite=TRUE)
-

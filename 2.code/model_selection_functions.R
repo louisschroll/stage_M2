@@ -12,50 +12,58 @@
 #
 # ------------------------------------------------------------------------------
 
-# Load packages
-# library(tidyverse)
-# library(spOccupancy)
-
-addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
-  # Add the models with a quadratic effect on a selected covariates to the models
-  # list
-  new_combination <- map(cov_combi_list, function(x) x <- c(x, paste0("I(",quadratic_cov,")^2"))) %>% 
-    purrr::keep(function(x) quadratic_cov %in% x)
-  
-  return(c(cov_combi_list, new_combination))
-}
-
 
 test_all_models <- function(cov_combination, data.int){
   model_nb <- length(cov_combination)
-  comparison_df <- tibble()
-  beta_value_df <- tibble()
-  for (i in seq_along(cov_combination)){
-    print(paste("Testing model", i, "/", model_nb))
-    selected_cov = cov_combination[[i]]
-    model_result <- run_int_model(data.int, selected_cov)
-    comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
-    beta_value_df <- beta_value_df %>% bind_rows(get_beta_values(model_result,selected_cov, model_nb=i))
-  }
-  
-  comparison_df <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
+  model_names <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
     unlist() %>% 
     as_tibble() %>% 
-    rename(model = value) %>% 
-    bind_cols(comparison_df) 
+    rename(model = value)
   
-  if (selected_cov != "1"){
-    beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
-      pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
-      select(-model)
-    
-    comparison_df <- bind_cols(comparison_df, beta_df_completed)
+  # Run models with spOccupancy
+  model_result_list <- map(cov_combination, function(x){run_int_model(data.int, selected_cov = x)})
+  
+  # Retrieve statistics (Rhat, ESS, pvalues, WAIC, CV) for each model
+  comparison_df <- model_names %>%
+    bind_cols(map_dfr(model_result_list, ~{
+                 get_model_stat(model_result = .x)}))
+  
+  # for (i in seq_along(cov_combination)){
+  #   print(paste("Testing model", i, "/", model_nb))
+  #   selected_cov = cov_combination[[i]]
+  #   model_result <- run_int_model(data.int, selected_cov)
+  #   comparison_df <- comparison_df %>% bind_rows(get_model_stat(model_result))
+  #   beta_value_df <- beta_value_df %>% bind_rows(get_beta_values(model_result,selected_cov, model_nb=i))
+  # }
+  # 
+  # comparison_df <- map(cov_combination, function(x) paste(x, collapse = " + ")) %>% 
+  #   unlist() %>% 
+  #   as_tibble() %>% 
+  #   rename(model = value) %>% 
+  #   bind_cols(comparison_df) 
+  
+  if (any(unlist(cov_combination) != "1")){
+    # beta_df_completed <- complete(beta_value_df, covar, model, fill = list(beta = NA)) %>% 
+    #   pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
+    #   select(-model)
+  # Retrieve values of coefficients beta
+  beta_value_df <- map_dfr(model_result_list, ~{
+    model_result <- .x
+    selected_cov <- model_result$beta.samples %>% as_tibble() %>% colnames()
+    get_beta_values(model_result, selected_cov[-1], 
+                    model_nb=paste(selected_cov[-1], 
+                                   collapse ="+"))}) %>% 
+    complete(covar, model, fill = list(beta = NA)) %>% 
+    pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
+    select(-model)
+  
+    comparison_df <- bind_cols(comparison_df, beta_value_df)
   }
-  return(comparison_df)
+  return(list(comparison_df = comparison_df, model_result_list = model_result_list))
 }
 
 
-run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
+run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_model="exponential"){
   # Wrapper for intPGOcc() function of spOccupancy
   # data.int: a list containing the data with the correct format for intPGOcc()
   # selected_cov: a character vector with the covariates to include in the model
@@ -77,9 +85,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 9000
-    n.burn <- 1500
-    n.thin <- 3
+    n.samples <- 900
+    n.burn <- 150
+    n.thin <- 1
     
     model_result <- intPGOcc(occ.formula = occ.formula,
                              det.formula = det.formula, 
@@ -102,9 +110,8 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
     dist.int <- dist(data.int$coords)
     min.dist <- min(dist.int)
     max.dist <- max(dist.int)
-    # Exponential covariance model
-    cov.model <- "exponential"
-    inits.list <- list(alpha = as.list(rep(0,nb_datasets)),
+
+        inits.list <- list(alpha = as.list(rep(0,nb_datasets)),
                        beta = 0, 
                        z = rep(1, total_sites_nb), 
                        sigma.sq = 2,
@@ -117,9 +124,9 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                        phi.unif = c(3 / max.dist, 3 / min.dist))
     
     batch.length <- 25
-    n.batch <- 320
-    n.burn <- 2000
-    n.thin <- 10
+    n.batch <- 360
+    n.burn <- 1500
+    n.thin <- 3
     tuning <- list(phi = .2)
     model_result <- spIntPGOcc(occ.formula = occ.formula, 
                              det.formula = det.formula, 
@@ -127,15 +134,66 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE){
                              inits = inits.list, 
                              priors = prior.list, 
                              tuning = tuning, 
-                             cov.model = cov.model, 
-                             NNGP = TRUE, 
+                             cov.model = spatial_model, 
+                             NNGP = T, 
                              n.neighbors = 5, 
                              n.batch = n.batch, 
                              n.burn = n.burn, 
                              n.chains = 3,
                              batch.length = batch.length, 
-                             n.report = 200) 
+                             n.report = 200,
+                             k.fold = 6, 
+                             k.fold.threads = 6,
+                             k.fold.only = FALSE,
+                             k.fold.seed = 42) 
   }
+  return(model_result)
+}
+
+
+run_non_int_model <- function(data, selected_cov){
+  # Wrapper for intPGOcc() function of spOccupancy
+  # data: a list containing the data with the correct format for intPGOcc()
+  # selected_cov: a character vector with the covariates to include in the model
+  
+  occ.formula <- writeFormula(selected_cov)
+  
+  total_sites_nb <- nrow(data$occ.covs)
+  det.formula <- ~ scale(transect_length) + session
+  
+  n.samples <- 9000
+  n.burn <- 1500
+  n.thin <- 3
+    
+  data <- list(y = data$y[[1]], 
+                 occ.covs = data$occ.covs,
+                 det.covs = data$det.covs[[1]])
+    
+  inits.list <- list(alpha = 0, 
+                       beta = 0, 
+                       z = apply(data$y, 1, max, na.rm = TRUE))
+    
+  prior.list <- list(alpha.normal = list(mean = 0, var = 2.72), 
+                       beta.normal = list(mean = 0, var = 2.72))
+    
+    
+  model_result <- PGOcc(occ.formula = occ.formula,
+                             det.formula = det.formula, 
+                             data = data,
+                             inits = inits.list,
+                             n.samples = n.samples, 
+                             priors = prior.list, 
+                             n.omp.threads = 1, 
+                             verbose = FALSE, 
+                             n.report = 2000, 
+                             n.burn = n.burn, 
+                             n.thin = n.thin, 
+                             n.chains = 2,
+                             k.fold = 6, 
+                             k.fold.threads = 6,
+                             k.fold.only = FALSE,
+                             k.fold.seed = 42)
+
   return(model_result)
 }
 
@@ -155,14 +213,15 @@ get_model_stat <- function(model_result){
   
   convergence_df <- tibble(rhat_max = NA, ESS_min=NA)
   # Convergence: Rhat & ESS
-  convergence_df$rhat_max <- model_result$rhat %>% unlist() %>% max() %>% round(3)
-  convergence_df$ESS_min <- model_result$ESS %>% unlist() %>% min() %>% round(1)
+  convergence_df$rhat_max <- model_result$rhat %>% unlist() %>% max(na.rm=T) %>% round(3)
+  convergence_df$ESS_min <- model_result$ESS %>% unlist() %>% min(na.rm=T) %>% round(1)
   
   # Bayesian p-value
-  ppc.out.1 <- ppcOcc(model_result, 'freeman-tukey', group = 1)
-  ppc.out.2 <- ppcOcc(model_result, 'freeman-tukey', group = 2)
+  ppc.out.1 <- ppcOcc(model_result, 'chi-squared', group = 1)
+  ppc.out.2 <- ppcOcc(model_result, 'chi-squared', group = 2)
   
-  nb_datasets <- length(ppc.out.1$fit.y)
+  len <- length(ppc.out.1$fit.y)
+  nb_datasets <- ifelse(len<=4, len, 1)
   pvalue_df <- tibble(gr1 = compute_bayesian_pvalue(ppc.out.1), 
                       gr2 = compute_bayesian_pvalue(ppc.out.2)) %>% 
     pivot_longer(everything()) %>% 
@@ -171,6 +230,7 @@ get_model_stat <- function(model_result){
     
   # WAIC
   waic_df <- waicOcc(model_result) %>% 
+    bind_rows() %>% 
     select(WAIC) %>% 
     round(0) %>% 
     mutate(name = paste0("waic_d",1:nrow(.))) %>% 
@@ -187,10 +247,10 @@ get_model_stat <- function(model_result){
 }
 
 
-compute_bayesian_pvalue <- function(ppc.out, isIntegrated = TRUE){
+compute_bayesian_pvalue <- function(ppc.out){
   # Compute baysian p-values with the result of ppcOcc function (spOccupancy)
   # Output: a numeric vector containing one p-value for each data set
-  if (isIntegrated){
+  if (length(ppc.out$fit.y)>1 & length(ppc.out$fit.y)<=4){
     obs_values <- ppc.out$fit.y
     sim_values <- ppc.out$fit.y.rep
     pvalues <- lapply(seq_along(obs_values), function(i) {
@@ -219,13 +279,15 @@ get_beta_values <- function(model_result, selected_cov, model_nb){
     select(all_of(selected_cov)) %>% 
     summarise_all(mean) %>% 
     pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "beta") %>% 
-    mutate(model = model_nb)
+    mutate(model = model_nb,
+           beta = round(beta, 2)) 
   
   sd_beta <- model_result$beta.samples %>% as_tibble() %>% 
     select(all_of(selected_cov)) %>% 
     summarise_all(sd) %>% 
     pivot_longer(all_of(selected_cov), names_to = "covar", values_to = "sd_beta") %>% 
-    mutate(model = model_nb)
+    mutate(model = model_nb,
+           sd_beta = round(sd_beta, 2))
   
   return(mean_beta %>% 
     full_join(sd_beta, by = join_by(covar, model)))
@@ -275,7 +337,32 @@ addSelectionSheet <- function(workbook, sheet_name, df, datasets_nb){
     min_value <- df %>% pull(all_of(cols)) %>% min()
     conditionalFormatting(workbook, sheet = sheet_name, cols = cols, rows = 2:(nrow(df) + 1),
                           type = "expression", 
-                          rule = paste0("<", min_value+5),
+                          rule = paste0("<", min_value+3),
                           style = createStyle(fontColour = "lightpink", textDecoration = "bold"))
   }
+}
+
+
+get_dataset_names <- function(data_list, species){
+  # Get the names of datasets containing obsevations of the species
+  # data_list: a list of the data sets, each subdivided in a sub-list of effort 
+  # and observation
+  # species: a character
+  # output: a character vector indicating data sets names
+  map(data_list, ~ filter_one_dataset(.x, species)) %>% 
+    compact() %>% 
+    names()
+}
+
+
+save_maps_as_pdf <- function(maps_list, path_to_save){
+  pdf(path_to_save)
+  for (i in seq_along(maps_list)){
+    plot <- plot_grid(plotlist = maps_list[[i]], nrow = 2,
+                      labels = names(maps_list)[i], #%>% str_to_upper(), 
+                      label_y = 1, label_x = -0.4,
+                      scale = 0.92)
+    print(plot)
+  }
+  dev.off() 
 }

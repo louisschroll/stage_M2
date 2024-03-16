@@ -35,13 +35,13 @@ test_quad_and_log <- function(data.int, species){
   cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", 
                         "mean_autumn_SST", "mean_SST", "sd_SST", "concavity", 
                         "dist_to_shore", "bathymetry",
-                        "mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "sd_VEL"))
+                        "mean_CHL", "mean_SSH", "sd_SSH", "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
   
   test_and_write_models <- function(cov_combination, data.int, df_null_model){
-    df <- test_all_models(cov_combination, data.int)
+    df <- test_all_models(cov_combination, data.int)$comparison_df
     addSelectionSheet(wb, sheet_name = cov_combination[[1]], df = bind_rows(df_null_model, df), datasets_nb=length(data.int$y))
   }
   # Create a new workbook
@@ -59,7 +59,6 @@ test_quad_and_log <- function(data.int, species){
   print(paste("results are in", file_path))
 }
 
-# ----- Hors repro -----
 species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
