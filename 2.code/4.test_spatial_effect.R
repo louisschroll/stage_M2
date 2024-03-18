@@ -80,23 +80,30 @@ species_list <- migralion_obs %>%
   str_subset("goeland", negate = T)
 
 best_covs <- list(
-  sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry",
-                       "mean_winter_SST", "mean_spring_SST", "mean_summer_SST",
-                       "mean_CHL", "mean_SSH"),
-  sterne_caugek_R = c("log_bathymetry",
-                      "mean_winter_SST", "mean_spring_SST", "mean_summer_SST",
-                      "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
   
-  goeland_leucophee_HR = c(),
-  goeland_leucophee_R = c(),
-  
-  petit_puffin_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "mean_winter_SST", "mean_autumn_SST"),
-  petit_puffin_R = c("dist_to_shore", "concavity", "mean_CHL", "sd_SAL", "log_sd_VEL"),
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", 
+                           "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("log_dist_to_shore", "mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
   
   mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_winter_SST", "mean_autumn_SST"),
-  mouette_melanocephale_R = c("log_bathymetry", "mean_SST"),
+  mouette_melanocephale_R = c("mean_autumn_SST"),
   
-  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "sd_SAL", "log_sd_VEL")
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_CHL", "sd_SAL", "mean_SSH", "log_sd_VEL", "mean_autumn_SST", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST"),
+  
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry", 'mean_CHL', "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "mean_SSH"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
+  
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
 )
 
 

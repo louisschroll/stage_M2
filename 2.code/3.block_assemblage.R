@@ -73,14 +73,13 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
-# species_list <- migralion_obs %>%
-#   filter(!is.na(species_name)) %>%
-#   pull(species_name) %>%
-#   unique() %>% 
+species_list <- migralion_obs %>%
+  filter(!is.na(species_name)) %>%
+  pull(species_name) %>%
+  unique()
 #   str_subset("sterne", negate = T) %>% 
 #   str_subset("goeland", negate = T)
 
-species_list <- c("sterne_caugek_R")
 
 best_static_covs <- list(
   fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
@@ -105,7 +104,7 @@ best_static_covs <- list(
   sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry"),
   sterne_caugek_R = c("log_bathymetry"),
   
-  sterne_pierregarin_R = c("log_bathymetry"),
+  sterne_pierregarin_R = c("log_bathymetry")
   )
 
 best_SST_covs <- list(
@@ -126,12 +125,12 @@ best_SST_covs <- list(
   petit_puffin_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
   petit_puffin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
-  puffin_de_scopoli_R = c("mean_winter_SST", "I(mean_winter_SST)^2", "mean_spring_SST"),
+  puffin_de_scopoli_R = c("mean_winter_SST", "mean_spring_SST"), #"I(mean_winter_SST)^2",),
   
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   sterne_caugek_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
-  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
   )
 
 best_dyn_covs <- list(
@@ -159,7 +158,7 @@ best_dyn_covs <- list(
   
   sterne_pierregarin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  sterne_pierregarin_R = c("mean_CHL", "mean_SSH", "log_sd_VEL"),
+  sterne_pierregarin_R = c("mean_CHL", "mean_SSH", "log_sd_VEL")
   )
 
 for (species in species_list){

@@ -85,8 +85,8 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_mod
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 900
-    n.burn <- 150
+    n.samples <- 9000
+    n.burn <- 1500
     n.thin <- 1
     
     model_result <- intPGOcc(occ.formula = occ.formula,
