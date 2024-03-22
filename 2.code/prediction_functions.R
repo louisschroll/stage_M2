@@ -11,9 +11,9 @@
 # -------------------------------------------------------------------------------
 
 
-source("2.code/format_data_for_spOccupancy.R")
-source("2.code/model_selection_functions.R")
-load("1.data/contour_golfe_du_lion.rdata")
+source("~/stage_M2/2.code/format_data_for_spOccupancy.R")
+source("~/stage_M2/2.code/model_selection_functions.R")
+load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
 
 run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
   # Wrapper for intPGOcc() function of spOccupancy
@@ -30,8 +30,8 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
     map(as.formula)
     
     n.samples <- 10000
-    n.burn <- 1500
-    n.thin <- 5
+    n.burn <- 1000
+    n.thin <- 1
     n.chains <- 3
     if (nb_datasets>1){
       inits.list <- list(alpha = as.list(rep(runif(1), nb_datasets)),
@@ -84,7 +84,7 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
 }
 
 
-make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F){
+make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F, is_plot_returned=T, subtitle = NULL){
   grid_pred <- grid %>% 
     as_tibble() %>% 
     select(all_of(selected_cov))
@@ -104,33 +104,48 @@ make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F)
   mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
   sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
   
-  psi <- ggplot() + 
-    geom_sf(data = grid, aes(fill = mean.psi), lwd = 0.1) +
-    scale_fill_viridis_c(guide = guide_colorbar(ticks = FALSE,
-                                                barwidth = 6,
-                                                barheight = 0.75)) +
-    labs(title = "Utilisation de l'espace",
-         fill = "Probabilité\nde présence") +
-    theme_bw() +
-    geom_sf(data = contour_golfe) +
-    theme(plot.title = element_text(size = 10),
-          legend.position = "bottom",
-          legend.title = element_text(size = 9),
-          axis.text = element_text(size = 8))
-  
-  sdpsi <- ggplot() + 
-    geom_sf(data = grid, aes(fill = sd.psi), lwd = 0.1) +
-    scale_fill_viridis_c(option = "B", guide = guide_colorbar(ticks = FALSE,
-                                                              barwidth = 6,
-                                                              barheight = 0.75)) + 
-    labs(title = "Incertitude sur la probabilité de présence",
-         fill = "SD") +
-    theme_bw() +
-    geom_sf(data = contour_golfe) +
-    theme(plot.title = element_text(size = 10),
-          legend.position = "bottom",
-          legend.title = element_text(size = 9),
-          axis.text = element_text(size = 8))
-  
-  return(list(psi = psi, sdpsi = sdpsi))
+  if (is_plot_returned){
+    psi <- ggplot() + 
+      geom_sf(data = grid, aes(fill = mean.psi), color = NA) +
+      geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+      scale_fill_viridis_c(guide = guide_colorbar(ticks = FALSE,
+                                                  barwidth = 6,
+                                                  barheight = 0.75),
+                           limits = c(0,1)) +
+      labs(title = "Space use",
+           subtitle = subtitle,
+           fill = "Presence probability") +
+      theme_bw() +
+      theme(plot.title = element_text(size = 13),
+            legend.position = "bottom",
+            legend.title = element_text(size = 9),
+            axis.text = element_text(size = 8)) 
+    
+    sdpsi <- ggplot() + 
+      geom_sf(data = grid, aes(fill = sd.psi), color = NA) +
+      geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+      scale_fill_viridis_c(option = "B", guide = guide_colorbar(ticks = FALSE,
+                                                                barwidth = 6,
+                                                                barheight = 0.75)) + 
+      labs(title = "Uncertainty on space use",
+           subtitle = subtitle,
+           fill = "SD") +
+      theme_bw() +
+      theme(plot.title = element_text(size = 13),
+            legend.position = "bottom",
+            legend.title = element_text(size = 9),
+            axis.text = element_text(size = 8))
+    
+    return(list(psi = psi, sdpsi = sdpsi))
+  }
+  else {
+    grid$mean.psi <- mean.psi
+    grid$sd.psi <- sd.psi
+    return(grid)
+  }
 }
+
+
+
+
+

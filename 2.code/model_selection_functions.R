@@ -264,12 +264,12 @@ compute_bayesian_pvalue <- function(ppc.out){
     obs <- ppc.out$fit.y
     sim <- ppc.out$fit.y.rep
     pvalue <- sum(sim > obs) / length(obs)
-    return(pvalue)
+    return(round(pvalue, 2))
   }
 }
 
 
-get_beta_values <- function(model_result, selected_cov, model_nb){
+get_beta_values <- function(model_result, selected_cov, model_nb=1){
   if ("1" %in% selected_cov){
     return(tibble())
   }
@@ -360,7 +360,7 @@ save_maps_as_pdf <- function(maps_list, path_to_save){
   for (i in seq_along(maps_list)){
     plot <- plot_grid(plotlist = maps_list[[i]], nrow = 2,
                       labels = names(maps_list)[i], #%>% str_to_upper(), 
-                      label_y = 1, label_x = -0.4,
+                      label_y = 1,
                       scale = 0.92)
     print(plot)
   }

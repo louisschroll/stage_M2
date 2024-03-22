@@ -1,0 +1,546 @@
+---
+title: "Seabirds occupancy in the Gulf of Lion"
+author: "Louis Schroll"
+date: "2024-03-20"
+output: 
+  html_document:
+    toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+# load packages
+library(tidyverse)
+library(sf)
+library(spOccupancy)
+library(openxlsx)
+library(cowplot)
+library(patchwork)
+library(shiny)
+
+# load data
+load("~/stage_M2/1.data/all_seabirds_counts.rdata")
+load("~/stage_M2/1.data/covariates_data.rdata")
+load("~/stage_M2/1.data/countLL.rdata")
+
+source("~/stage_M2/2.code/prediction_functions.R")
+source("~/stage_M2/2.code/plot_functions.R")
+grid <- covariates_data %>% 
+  mutate(id = 1:nrow(covariates_data)) %>% 
+  st_transform(st_crs(pelmed_obs))
+
+
+data_list = list(
+  pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
+  samm = list(obs = samm_obs, eff = samm_eff),
+  pnm = list(obs = pnm_obs, eff = pnm_eff),
+  migralion = list(obs = migralion_obs, eff = migralion_eff)
+  )
+
+obs_data <- bind_rows(migralion_obs %>% mutate(data_source = "migralion") %>% 
+                            rename(effectif = Effectif),
+                     pelmed_obs %>% mutate(data_source = "PELMED") %>% st_crop(st_bbox(grid)),
+                     pnm_obs %>% mutate(data_source = "PNM"),
+                     samm_obs %>% mutate(data_source = "SAMM") %>% st_crop(st_bbox(grid)))
+
+present_results <- function(species){
+  # run the model
+  data.int <- get_data_for_spOccupancy(data_list, grid, species)
+  selected_cov <- best_covs[[species]]
+  model_result <- run_and_predict(data.int = data.int, grid = grid, species = species, selected_cov = selected_cov)
+  
+  # Predictive map 
+  psi_map <- model_result$psi + 
+      geom_sf(data = obs_data %>% filter(species_name == species), 
+              aes(color = data_source)) +
+      scale_color_manual(values = c("red", "blue1", "purple", "coral4")) +
+    theme(legend.position="bottom", legend.box = "vertical")
+  
+  predictive_map <- psi_map + model_result$sdpsi
+
+# plot_grid(plotlist = list(model_result$psi, model_result$sdpsi), 
+    #       labels = species, label_x = 0.2)
+  
+  # PPC
+  datasets_names = get_dataset_names(data_list, species)
+  PPC_plots <- list(
+    pvalue_CS1 = ppcOcc(model_result$res, fit.stat = "chi-squared", group = 1) %>% 
+      plot_PPC(datasets_names = datasets_names, test = "chi-squared", group = 1),
+    pvalue_CS2 = ppcOcc(model_result$res, fit.stat = "chi-squared", group = 2) %>% 
+      plot_PPC(datasets_names = datasets_names, test = "chi-squared", group = 2),
+    pvalue_FT1 = ppcOcc(model_result$res, fit.stat = "freeman-tukey", group = 1) %>%
+      plot_PPC(datasets_names = datasets_names, test = "freeman-tukey", group = 1),
+    pvalue_FT2 = ppcOcc(model_result$res, fit.stat = "freeman-tukey", group = 2) %>% 
+      plot_PPC(datasets_names = datasets_names, test = "freeman-tukey", group = 2)
+  )
+
+  # Traceplots and density plots
+  alpha_param <- model_result$res$ESS$alpha %>% janitor::clean_names() %>% 
+    bind_rows() %>% 
+    pivot_longer(everything(), values_to = "ESS", names_to = "param") %>% 
+    arrange(by = ESS) %>% 
+    pull(param)
+
+  beta_param <- model_result$res$ESS$beta %>% janitor::clean_names() %>% 
+    bind_rows() %>% 
+    pivot_longer(everything(), values_to = "ESS", names_to = "param") %>% 
+    arrange(by = ESS) %>% 
+    pull(param)
+
+  coeff_plots <- make_coeff_plot(model_result$res, ncol = 2, param_to_plot = c(alpha_param[1:2], beta_param[1:2]))
+  
+  caterpillar_plot <- MCMCvis::MCMCplot(
+      object = model_result$res$beta.samples,
+      object2 = NULL,
+      params = "all")
+  
+  # Table with parameter info
+  table_beta <- model_result$res$beta.samples %>% 
+    janitor::clean_names() %>% 
+    as_tibble() %>% 
+    pivot_longer(everything(), names_to = "covar", values_to = "beta") %>% 
+    group_by(covar) %>% 
+    summarise(mean = mean(beta),
+            SD = sd(beta),
+            `2.5%` = quantile(beta, probs = 0.025),
+            `50%` = median(beta),
+            `97.5%` = quantile(beta, probs = 0.975)) %>% 
+    knitr::kable(caption = "Occurence parameter")
+  
+  return(list(model_result = model_result$res, predictive_map = predictive_map, 
+              PPC_plots = PPC_plots, coeff_plots = coeff_plots, table = table_beta,
+              caterpillar_plot = caterpillar_plot))
+}
+
+best_covs <- list(
+  fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
+  
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", 
+                           "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("log_dist_to_shore", "mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_winter_SST", "mean_autumn_SST"),
+  mouette_melanocephale_R = c("mean_autumn_SST"),
+  
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_CHL", "sd_SAL", 
+                        "mean_SSH", "log_sd_VEL", "mean_autumn_SST", 
+                        "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST"),
+  
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry", 'mean_CHL', "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "mean_SSH"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
+  
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
+)
+```
+
+
+# Fou de bassan
+
+Data sources: Migralion, PELMED, PNM, SAMM (all sessions)
+
+```{r, include = FALSE}
+species <- "fou_de_bassan_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+
+MCMCvis::MCMCplot(
+      object = list_res_plot$model_result$beta.samples,
+      object2 = NULL,
+      params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+
+# Goeland Leucophee / Yellow legged gull
+
+## Non repro
+
+Data sources: Migralion postnup, PNM autumn, SAMM winter
+```{r, include = FALSE}
+species <- "goeland_leucophee_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+## Repro
+
+Data sources: Migralion prenup, PELMED, PNM spring
+```{r, include = FALSE}
+species <- "goeland_leucophee_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Mouette melanocephale / Mediteranean gull
+
+## Non repro
+
+Data sources: Migralion postnup, PNM autumn, SAMM winter
+```{r, include = FALSE}
+species <- "mouette_melanocephale_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+## Repro
+
+Data sources: Migralion prenup, PELMED
+```{r, include = FALSE}
+species <- "mouette_melanocephale_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Mouette pygmée / Little gull
+
+Data sources: Migralion prenup, SAMM winter
+```{r, include = FALSE}
+species <- "mouette_pygmee_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Mouette rieuse / Black-headed gull
+
+Data sources: Migralion postnup, PNM autumn, SAMM winter
+```{r}
+# Ajouter Pelmed et migralion prenup ?
+```
+Data sources: Migralion prenup, PELMED (sauf 2017 pas d'obs), PNM spring
+```{r, include = FALSE}
+species <- "mouette_rieuse_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+
+# Oceanite tempete / Storm petrel
+
+Data sources: Migralion prenup, PELMED (sauf 2017 pas d'obs), PNM spring
+```{r, include = FALSE}
+species <- "oceanite_tempete"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+
+# Petits puffins / Small shearwaters
+
+## Non repro
+
+Data sources: Migralion postnup, PNM autumn, SAMM winter
+```{r, include = FALSE}
+species <- "petit_puffin_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+## Repro
+
+Data sources: Migralion prenup, PELMED, PNM spring
+```{r, include = FALSE}
+species <- "petit_puffin_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Scopoli’s shearwater / Puffin de Scopoli
+
+Data sources: Migralion, PELMED, PNM printemps
+```{r, include = FALSE}
+species <- "puffin_de_scopoli_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Sternes caugek / Sandwich terns
+
+## Non repro
+
+Data sources: Migralion postnup, PNM autumn, SAMM winter
+
+```{r, include = FALSE}
+species <- "sterne_caugek_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+## Repro
+
+Data sources: Migralion prenup, PELMED, PNM spring
+```{r, include = FALSE}
+species <- "sterne_caugek_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+# Common tern / Sterne pierregarin
+
+Data sources: Migralion prenup, PELMED
+```{r, include = FALSE}
+species <- "sterne_pierregarin_R"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```

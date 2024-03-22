@@ -76,8 +76,7 @@ species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
   unique() %>% 
-  str_subset("sterne", negate = T) %>% 
-  str_subset("goeland", negate = T)
+  str_subset("goeland", negate = F) 
 
 best_covs <- list(
   fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),

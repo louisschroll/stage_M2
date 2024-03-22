@@ -101,3 +101,55 @@ addQuadraticEffect <- function(cov_combi_list, quadratic_cov){
   
   return(c(cov_combi_list, new_combination))
 }
+
+
+
+
+# Define UI for application
+# ui <- fluidPage(
+#   titlePanel("Choose Graph"),
+#   
+#   sidebarLayout(
+#     sidebarPanel(
+#       selectInput("graph_type", "Select Graph Type:",
+#                   choices = c("Traceplots occurence coeffs" = "TO",
+#                                "Density occurence coeffs" = "DO",
+#                                "Traceplots detection coeffs" = "TD",
+#                                "Density detection coeffs" = "DD",
+#                               "Chi-squared Group 1" = "CS1",
+#                               "Chi-squared Group 2" = "CS2",
+#                               "Freeman-Tukey Group 1" = "FT1",
+#                               "Freeman-Tukey Group 2" = "FT2"))
+#     ),
+#     
+#     mainPanel(
+#       plotOutput("selected_plot")
+#     )
+#   )
+# )
+# 
+# # Define server logic
+# server <- function(input, output) {
+#   output$selected_plot <- renderPlot({
+#     if (input$graph_type == "CS1") {
+#       res_fou$PPC_plots$pvalue_CS1
+#     } else if (input$graph_type == "CS2") {
+#       res_fou$PPC_plots$pvalue_CS2
+#     } else if (input$graph_type == "FT1") {
+#       res_fou$PPC_plots$pvalue_FT1
+#     } else if (input$graph_type == "FT2") {
+#       res_fou$PPC_plots$pvalue_FT2
+#     } else if (input$graph_type == "TO"){
+#       res_fou$coeff_plot$beta_traceplot
+#     } else if (input$graph_type == "DO"){
+#       res_fou$coeff_plot$beta_density
+#     } else if (input$graph_type == "TD"){
+#       res_fou$coeff_plot$alpha_traceplot
+#     } else if (input$graph_type == "DD"){
+#       res_fou$coeff_plot$alpha_density
+#     }
+#   })
+# }
+# 
+# # Run the application 
+# shinyApp(ui = ui, server = server)

@@ -48,9 +48,43 @@ samm_obs$species_name <- NA
 ```
 
 
-# PT 1
+## Fou de bassan / Northern gannet
 
-## Yellow-legged Gull / Goeland leucophee
+Presence: y-round
+
+Reproduction: not here
+
+**Split data: No**
+
+```{r}
+species <- "fou de bassan"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+
+```{r}
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "fou de bassan",
+                                                 "fou_de_bassan_HR", species_name))
+
+pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan", 
+                                                    "fou_de_bassan_HR", species_name))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan",
+                                                    "fou_de_bassan_HR", species_name))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan",
+                                                    #& session %in% c("prenup_2022", "prenup_2023"), 
+                                                    "fou_de_bassan_HR", species_name))
+```
+
+
+
+
+
+## Goeland leucophee / Yellow-legged Gull
 
 Presence: year-round 
 
@@ -58,9 +92,11 @@ Reproduction: from March to July
 
 **Split data:**
 
+  - **Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, SAMM data winter sessions**
+
   - **During repro: migralion data, prenup sessions, Megaobs data, spring sessions, Pelmed**
   
-  - **Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, SAMM data winter sessions**
+  
 
 ```{r}
 species <- "goeland leucophee"
@@ -103,111 +139,8 @@ samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1wi
 ```
 
 
-## Small shearwaters / Petits puffins
 
-Presence: year-round for Yelkouan, and for balearic
-
-Reproduction: from March to July
-
-**Split data**:
-
-  - **During repro: migralion data (?), prenup sessions, Megaobs data, spring sessions, Pelmed**
-  
-  - **Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, SAMM data winter sessions**
-
-```{r}
-species <- "petit puffin"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-```{r}
-migralion_obs <- split_periods(migralion_obs, species="petit puffin", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
-
-pnm_obs <- split_periods(pnm_obs, "petit puffin", 
-              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
-              session_HR = c("2019_automne", "2020_automne"))
-
-pelmed_obs <- split_periods(pelmed_obs, "petit puffin", 
-              session_repro = c("2017","2018", "2019", "2021"), 
-              session_HR = c(""))
-
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
-                                                 & nom_fr == "petit puffin",
-                                                 "petit_puffin_HR", species_name))
-```
-
-
-## Mouette pygmée
-
-Presence: winter - spring
-
-Repro :may to end of July
-
-**Keep data: Migralion, prenup sessions, SAMM, winter sessions**
-
-```{r}
-species <- "mouette pygmee"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-```{r}
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
-                                                 & nom_fr == "mouette pygmee",
-                                                 "mouette_pygmee_HR", species_name))
-
-migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(session %in% c("prenup_2022", "prenup_2023") 
-                                                 & nom_fr == "mouette pygmee",
-                                                 "mouette_pygmee_HR", species_name))
-```
-
-
-## Sandwich terns / Sternes caugek
-
-Presence: y-round
-
-Reproduction: mars-avril à juillet
-
-**Split data:**
-
-  - **During repro: migralion, prenup sessions, Megaobs, spring sessions, Pelmed**
-  
-  - **Outside repro: migralion data postnup sessions, Megaobs data automn sessions, SAMM winter sessions**
-
-```{r}
-species <- "sterne caugek"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-```{r}
-migralion_obs <- split_periods(migralion_obs, species="sterne caugek", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
-
-pnm_obs <- split_periods(pnm_obs, "sterne caugek", 
-              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
-              session_HR = c("2019_automne", "2020_automne"))
-
-pelmed_obs <- split_periods(pelmed_obs, "sterne caugek", 
-              session_repro = c("2017","2018", "2019", "2021"), 
-              session_HR = c(""))
-
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "sterne caugek",
-                                                 "sterne_caugek_HR", species_name))
-```
-
-
-## Mouette melano
+## Mouette melanocephale / Mediterranean gull
 
 Presence: y-round
 
@@ -249,17 +182,163 @@ samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1wi
 
 
 
-# PT 2
+
+
+## Mouette pygmée / Little gull
+
+Presence: winter - spring
+
+Repro :may to end of July
+
+**Keep data: Migralion, prenup sessions, SAMM, winter sessions**
 
 ```{r}
-# migralion_obs$species_name <- NA
-# pelmed_obs$species_name <- NA
-# pnm_obs$species_name <- NA
-# samm_obs$species_name <- NA
+species <- "mouette pygmee"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "mouette pygmee",
+                                                 "mouette_pygmee_HR", species_name))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(session %in% c("prenup_2022", "prenup_2023") 
+                                                 & nom_fr == "mouette pygmee",
+                                                 "mouette_pygmee_HR", species_name))
 ```
 
 
-## Scopoli's shearwater / Puffin de Scopoli
+
+
+## Mouette rieuse / Black-headed gull
+
+Presence: 
+
+Reproduction: 
+
+**Split data:**
+
+  - **During repro: X**
+  
+  - **Outside repro: PNM autumn, SAMM winter, migralion postnup**
+
+
+```{r}
+species <- "mouette rieuse"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "mouette rieuse"
+                                                      & session %in% c("SAMM_1(1winter)","SAMM_2(1winter)"),
+                                                 "mouette_rieuse_HR", species_name))
+
+pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse" 
+                                                    & session %in% c("2019_automne", "2020_automne"), 
+                                                    "mouette_rieuse_HR", species_name))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse"
+                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    "mouette_rieuse_HR", species_name))
+```
+
+
+
+
+
+
+## Oceanite tempete / Storm petrel
+
+Presence: 
+
+Reproduction: mai à fin juillet
+
+**Split data:**
+
+  - **During repro: PNM printemps, Pelmed sauf 2020, Migralion prenup**
+  
+  - **Outside repro: X**
+  
+
+```{r}
+species <- "oceanite tempete"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+# samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "oceanite tempete"
+#                                                       & session == "SAMM_1(2summer)",
+#                                                  "oceanite_tempete", species_name))
+
+pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete", 
+                                                    #& session %in% c("2019_automne", "2020_automne"), 
+                                                    "oceanite_tempete", species_name))
+
+pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete" 
+                                                    & session != "2020", 
+                                                    "oceanite_tempete", species_name))
+
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete"
+                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    "oceanite_tempete", species_name))
+```
+
+
+
+
+
+## Petits puffins / Small shearwaters
+
+Presence: year-round for Yelkouan, and for balearic
+
+Reproduction: from March to July
+
+**Split data**:
+
+  - **During repro: migralion data (?), prenup sessions, Megaobs data, spring sessions, Pelmed**
+  
+  - **Outside repro: migralion data postnup sessions, Megaobs data autumn sessions, SAMM data winter sessions**
+
+```{r}
+species <- "petit puffin"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+migralion_obs <- split_periods(migralion_obs, species="petit puffin", 
+              session_repro = c("prenup_2022", "prenup_2023"), 
+              session_HR = c("postnup_2022", "postnup_2023"))
+
+pnm_obs <- split_periods(pnm_obs, "petit puffin", 
+              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
+              session_HR = c("2019_automne", "2020_automne"))
+
+pelmed_obs <- split_periods(pelmed_obs, "petit puffin", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+                                                 & nom_fr == "petit puffin",
+                                                 "petit_puffin_HR", species_name))
+```
+
+
+
+
+
+## Puffin de Scopoli / Scopoli's shearwater
 
 Presence: repro, puis hivernage au large
 
@@ -301,6 +380,46 @@ pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="puffin de sco
 
 ```
 
+
+## Sandwich terns / Sternes caugek
+
+Presence: y-round
+
+Reproduction: mars-avril à juillet
+
+**Split data:**
+
+  - **During repro: migralion, prenup sessions, Megaobs, spring sessions, Pelmed**
+  
+  - **Outside repro: migralion data postnup sessions, Megaobs data automn sessions, SAMM winter sessions**
+
+```{r}
+species <- "sterne caugek"
+count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+migralion_obs <- split_periods(migralion_obs, species="sterne caugek", 
+              session_repro = c("prenup_2022", "prenup_2023"), 
+              session_HR = c("postnup_2022", "postnup_2023"))
+
+pnm_obs <- split_periods(pnm_obs, "sterne caugek", 
+              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
+              session_HR = c("2019_automne", "2020_automne"))
+
+pelmed_obs <- split_periods(pelmed_obs, "sterne caugek", 
+              session_repro = c("2017","2018", "2019", "2021"), 
+              session_HR = c(""))
+
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "sterne caugek",
+                                                 "sterne_caugek_HR", species_name))
+```
+
+
+
 ## Common tern / Sterne pierregarin
 
 Hautement migratrice, la Sterne pierregarin quitte totalement ses sites de reproduction à partir de la mi-août et dans le courant du mois de septembre. A partir de la fin de l’été, des rassemblements importants d’oiseaux peuvent être notés sur le littoral, principalement vers la fin août et en début septembre. Quelques rares observations hivernales sont effectuées chaque année en France, concernant à chaque fois des individus isolés. 
@@ -315,7 +434,6 @@ Reproduction: avril à juillet
   - **During repro: Migralion prenup, PELMED sauf 2020**
   
   - **Outside repro: X**
-
 
 ```{r}
 species <- "sterne pierregarin"
@@ -337,122 +455,7 @@ migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="sterne 
 ```
 
 
-## Storm petrel / Oceanite tempete
-
-Presence: 
-
-Reproduction: mai à fin juillet
-
-**Split data:**
-
-  - **During repro: PNM printemps, Pelmed sauf 2020, Migralion prenup**
-  
-  - **Outside repro: X**
-  
-
-```{r}
-species <- "oceanite tempete"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-```{r}
-# samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "oceanite tempete"
-#                                                       & session == "SAMM_1(2summer)",
-#                                                  "oceanite_tempete", species_name))
-
-pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete", 
-                                                    #& session %in% c("2019_automne", "2020_automne"), 
-                                                    "oceanite_tempete", species_name))
-
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete" 
-                                                    & session != "2020", 
-                                                    "oceanite_tempete", species_name))
-
-migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
-                                                    "oceanite_tempete", species_name))
-```
-
-
-## Black-headed gull / Mouette rieuse
-
-Presence: 
-
-Reproduction: 
-
-**Split data:**
-
-  - **During repro: X**
-  
-  - **Outside repro: PNM autumn, SAMM winter, migralion postnup**
-
-
-```{r}
-species <- "mouette rieuse"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-```{r}
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "mouette rieuse"
-                                                      & session %in% c("SAMM_1(1winter)","SAMM_2(1winter)"),
-                                                 "mouette_rieuse_HR", species_name))
-
-pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse" 
-                                                    & session %in% c("2019_automne", "2020_automne"), 
-                                                    "mouette_rieuse_HR", species_name))
-
-migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
-                                                    "mouette_rieuse_HR", species_name))
-```
-
-
-## Northern gannet / Fou de bassan
-
-Presence: 
-
-Reproduction: 
-
-**Split data:**
-
-  - **During repro: **
-  
-  - **Outside repro: **
-
-
-```{r}
-species <- "fou de bassan"
-count_by_session(migralion_obs, species) %>% kable(format = "markdown", caption = "Migralion")
-count_by_session(samm_obs, species) %>% kable(format = "markdown", caption = "SAMM")
-count_by_session(pelmed_obs, species) %>% kable(format = "markdown", caption = "Pelmed")
-count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Megaobs - PNM")
-```
-
-
-```{r}
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "fou de bassan",
-                                                     # & session == "SAMM_1(2summer)",
-                                                 "fou_de_bassan_HR", species_name))
-
-pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan", 
-                                                    #& session %in% c("2019_automne", "2020_automne"), 
-                                                    "fou_de_bassan_HR", species_name))
-
-pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan",
-                                                    #& session != "2020", 
-                                                    "fou_de_bassan_HR", species_name))
-
-migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
-                                                    "fou_de_bassan_HR", species_name))
-```
-
+# Save
 
 ```{r}
 save(pelmed_obs, pelmed_eff, 
@@ -461,4 +464,15 @@ save(pelmed_obs, pelmed_eff,
      migralion_obs, migralion_eff,
      ferme_obs, ferme_eff,
      file = "~/stage_M2/1.data/all_seabirds_counts.rdata")
+```
+
+
+
+
+```{r}
+species <- "grand cormoran"
+count_by_session(migralion_obs, species) #%>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) #%>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) #%>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Megaobs - PNM")
 ```

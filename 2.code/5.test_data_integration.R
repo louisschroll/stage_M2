@@ -39,24 +39,32 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
 
 
 best_covs <- list(
-  sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry",
-                       "mean_winter_SST", "mean_spring_SST", "mean_summer_SST",
-                       "mean_CHL", "mean_SSH"),
-  sterne_caugek_R = c("log_bathymetry",
-                      "mean_winter_SST", "mean_spring_SST", "mean_summer_SST",
-                      "mean_CHL", "mean_SSH", "sd_SSH"),
+  fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
   
-  goeland_leucophee_HR = c(),
-  goeland_leucophee_R = c(),
-  
-  petit_puffin_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "mean_winter_SST", "mean_autumn_SST"),
-  petit_puffin_R = c("dist_to_shore", "mean_CHL", "sd_SAL", "log_sd_VEL"),
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", 
+                           "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("log_dist_to_shore", "mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
   
   mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_winter_SST", "mean_autumn_SST"),
-  mouette_melanocephale_R = c("log_bathymetry", "mean_SST"),
+  mouette_melanocephale_R = c("mean_autumn_SST"),
   
-  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "sd_SAL", "log_sd_VEL")
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_CHL", "sd_SAL", "mean_SSH", "log_sd_VEL", "mean_autumn_SST", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST"),
+  
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry", 'mean_CHL', "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "mean_SSH"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
+  
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
 )
+
 
 
 test_data_integration <- function(data_list, grid, species, selected_cov){
@@ -88,14 +96,22 @@ test_data_integration <- function(data_list, grid, species, selected_cov){
   #                model_result <- .x
   #                get_model_stat(model_result)
   #  }))
-  
-  waic_df <- map_dfr(model_res_list, ~{
-    waicOcc(.x) %>% round(1)
+  stat_df <- map_dfr(model_res_list, ~{
+    model_result <- .x
+    tibble(
+      pavlue_CS1 = ppcOcc(model_result, fit.stat = "chi-squared", group = 1) %>% compute_bayesian_pvalue(),
+      pavlue_CS2 = ppcOcc(model_result, fit.stat = "chi-squared", group = 2) %>% compute_bayesian_pvalue(),
+      pavlue_FT1 = ppcOcc(model_result, fit.stat = "freeman-tukey", group = 1) %>% compute_bayesian_pvalue(),
+      pavlue_FT2 = ppcOcc(model_result, fit.stat = "freeman-tukey", group = 2) %>% compute_bayesian_pvalue(),
+      WAIC = waicOcc(model_result) %>% bind_rows() %>% pull(WAIC) %>% round(0),
+      CV_deviance = model_result$k.fold.deviance %>% round(0)
+    ) 
   }) %>% 
-    select(WAIC) %>% 
     mutate(model = model_names,
            dataset = unique(model_names) %>% str_split(pattern = '_') %>% unlist()) %>% 
-    arrange(dataset)
+    arrange(dataset) %>% 
+    relocate(dataset, model)
+  
   
   beta_df <- map_dfr(model_res_list, ~{
     get_beta_values(model_result = .x, selected_cov, model_nb=1)
@@ -107,18 +123,25 @@ test_data_integration <- function(data_list, grid, species, selected_cov){
                   function(x) make_predictive_map(x, grid = grid, selected_cov = selected_cov))
   names(predictive_maps_list) <- unique(model_names)
   
-  return(list(waic_df = waic_df, beta_df = beta_df, maps = predictive_maps_list))
+  return(list(stat_df = stat_df, beta_df = beta_df, maps = predictive_maps_list))
 }
 
 
 save_stat <- function(integration_res, species){
   # Create a new workbook
   workbook <- createWorkbook()
-  addWorksheet(workbook, "beta_values")
+  
   # Add sheets
+  addWorksheet(workbook, "perf")
+  writeData(workbook, sheet = "perf", x = integration_res$stat_df)
+  for (cols in 3:6) {
+    conditionalFormatting(workbook, sheet = "perf", cols = cols, rows = 2:(nrow(integration_res$stat_df)+1),
+                          type = "between", rule = c(0.1, 0.9), 
+                          style = createStyle(bgFill = "lightgreen", fontColour = "darkgreen"))
+  }
+  
+  addWorksheet(workbook, "beta_values")
   writeData(workbook, sheet = "beta_values", x = integration_res$beta_df)
-  addWorksheet(workbook, "WAIC")
-  writeData(workbook, sheet = "WAIC", x = integration_res$waic_df)
   # Save the workbook
   file_path <- paste0("3.results/model_selection/", 
                       species, 
@@ -131,8 +154,7 @@ save_stat <- function(integration_res, species){
 species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
-  unique() %>% 
-  str_subset(pattern = "goeland", negate = T)
+  unique()
 
 for (species in species_list){
   print(species)
