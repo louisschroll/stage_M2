@@ -8,9 +8,10 @@ library(nimble)
 source("~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R")
 
 # Prepare data
-species <- "sterne_caugek_HR"
+species <- "sterne_caugek_R"
 
-data <- list(obs_data = pelmed_obs, effort_data = pelmed_eff)
+data_list <- list(pelmed = list(obs_data = pelmed_obs, effort_data = pelmed_eff), 
+                  migralion = list(obs_data = migralion_obs, effort_data = migralion_eff))
 
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
@@ -19,11 +20,11 @@ grid <- covariates_data %>%
 selected_cov <- c("mean_CHL", "mean_SST", "dist_to_shore")
 
 data_nmix <- prepare_data_for_Nmixture(data, grid, species, selected_cov) 
-data2 <- list(obs_data = migralion_obs %>% rename(effectif = Effectif), effort_data = migralion_eff)
+data <- list(obs_data = pelmed_obs, effort_data = pelmed_eff)
 data_nmix2 <- prepare_data_for_Nmixture(data2, grid, species, selected_cov)
 
 # Nimble model
-Nmixture.model <- nimbleCode({
+int.Nmixture.model <- nimbleCode({
   
   # priors
   for(i in 1:n.occ.cov){
@@ -74,7 +75,7 @@ n.burnin <- 10000
 n.chains <- 3
 
 # In one step
-mcmc.output <- nimbleMCMC(code = Nmixture.model,
+mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
                           data = my.data,
                           constants = my.constants,
                           inits = initial.values,
@@ -162,3 +163,7 @@ ggplot() + geom_sf(data = grid, aes(fill = log(mean_pred))) +
 
 ggplot() + geom_sf(data = grid, aes(fill = log(sd_pred))) +
   scale_fill_viridis_c(option = "B")
+
+
+
+

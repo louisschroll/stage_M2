@@ -8,7 +8,7 @@ library(nimble)
 source("~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R")
 
 # Prepare data
-species <- "goeland_leucophee_R"
+species <- "sterne_caugek_R"
 
 data <- list(obs_data = pelmed_obs, effort_data = pelmed_eff)
 
@@ -16,7 +16,7 @@ grid <- covariates_data %>%
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs)) 
 
-selected_cov <- c("mean_CHL", "mean_SST", "dist_to_shore")
+selected_cov <- c("mean_CHL", "mean_SSH", "mean_SST")
 
 data_nmix <- prepare_data_for_Nmixture(data, grid, species, selected_cov) 
 
@@ -54,7 +54,7 @@ Nmixture.model <- nimbleCode({
 # Prepare data
 XN = data_nmix$occurence.cov
 n.occ.cov <- ncol(XN)
-my.constants <- list(XN = cbind(XN$intersect, XN$mean_CHL, XN$mean_SST, XN$dist_to_shore),
+my.constants <- list(XN = XN,
                     transect_length = scale(data_nmix$detection.cov$transect_length),
                     nsites = nrow(data_nmix$effectif),
                     nreplicates = ncol(data_nmix$effectif),
@@ -69,9 +69,9 @@ initial.values <- list(a = rnorm(n.occ.cov,0,1),
 parameters.to.save <- c("a", "b", "lambda", "p", "N")
 
 # Nombre d'iterations, burn-in et nombre de chaine
-n.iter <- 100000
-n.burnin <- 10000
-n.chains <- 3
+n.iter <- 510000
+n.burnin <- 50000
+n.chains <- 2
 
 # In one step
 mcmc.output <- nimbleMCMC(code = Nmixture.model,
@@ -113,10 +113,12 @@ mcmc.output <- runMCMC(Cmcmco,
 
 # check convergence
 mcmcplots::denplot(mcmc.output)
+mcmcplots::traplot(mcmc.output)
 coda::effectiveSize(mcmc.output)
 
 MCMCvis::MCMCsummary(object = mcmc.output, round = 2,  params = c("a"))
 
+MCMCvis::MCMCtrace(mcmc.output)
 MCMCvis::MCMCtrace(object = mcmc.output,
                    pdf = FALSE, 
                    ind = TRUE, 

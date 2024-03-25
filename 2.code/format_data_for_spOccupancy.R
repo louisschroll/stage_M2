@@ -151,17 +151,17 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
       mutate(y = ifelse(effort <= 0, NA, y)) # remove potential obs in cells absent from effort data this session
     
     effort_list = c(effort_list, occurence_df$effort)
-    # effort_matrix[,ii] <- occurence_df$effort
-    # ii = ii + 1
     occurence_list = c(occurence_list, occurence_df$y)
     store_session = c(store_session, rep(S, nrow(occurence_df)))
   }
   
   y <- matrix(occurence_list, ncol = length(session_list))
   
+  effort_list[effort_list == 0] <- NA
+  effort_list <- (effort_list - mean(effort_list, na.rm = T)) / sd(effort_list, na.rm = T)
   detcov <- matrix(effort_list, ncol = length(session_list))
-  detcov[detcov == 0] <- NA
-  detcov <- scale(detcov)
+  
+  
   # check dimensions 
   if( !(length(which(is.na(y))) == length(which(is.na(detcov))) ) ){
     print("Warnings: inconsistent dimensions in data")

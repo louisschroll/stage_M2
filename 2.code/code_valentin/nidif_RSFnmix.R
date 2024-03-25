@@ -24,7 +24,7 @@ load("~/stage_M2/1.data/pelmed2017_2021.rdata")
 # pelobs <- st_read(here("Data/Historiques/PELMED/PELMED2021/DonneesPelagis_Observations_2023-06-22.shp"))
 
 load("contour_golfe_du_lion.Rdata")
-load("1.data/gdlhex.rdata")
+load("~/stage_M2/1.data/gdlhex.rdata")
 load("grid.rdata")
 
 peleff <- peleff %>%
@@ -176,6 +176,17 @@ nmix.ni <- nimbleCode({
   }
 
 })
+
+tibble(a=ypel$eff2017,
+      b=ypel$eff2018,
+      c=ypel$eff2019,
+      d=ypel$eff2020,
+      e=ypel$eff2021,
+      row = 1:length(ypel$eff2017)) %>% 
+  pivot_longer(-row) %>% 
+  mutate(value = (value-mean(value))/sd(value)) %>% 
+ # distinct() %>% 
+  pivot_wider(names_from = name, values_from = value) 
 
 # format data
 constants.o <- list(prof = scale(ypel$depth.x)[,1],

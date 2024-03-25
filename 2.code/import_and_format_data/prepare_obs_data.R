@@ -179,7 +179,8 @@ migralion_obs <- prenup22_obs %>%
   bind_rows(prenup2023_obs %>% 
               select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
   rename(nom_fr = Espece,
-         date = Date_UTC) %>% 
+         date = Date_UTC,
+         effectif = Effectif) %>% 
   mutate(date = as.Date(date)) %>% 
   format_name(ref_coordinate_system) %>% 
   mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
