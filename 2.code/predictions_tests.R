@@ -43,12 +43,16 @@ species <- "sterne_caugek_HR"
 
 data.int <- get_data_for_spOccupancy(data_list, grid, species)
 
-selected_cov <- c("log_dist_to_shore", "log_bathymetry",
-                  "mean_winter_SST", "mean_spring_SST", "mean_summer_SST",
-                  "mean_CHL", "mean_SSH")
+selected_cov <- c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
 aa <- run_and_predict(data.int = data.int, grid=grid, species=species, selected_cov=selected_cov)
 
 aa$psi 
+
+
+grid_caugek <- put_results_in_grid(grid, model_result = aa$res, selected_cov) %>% 
+  select(mean.intensity, sd.intensity)
+plot(grid_caugek)
+save(grid_caugek, file = "results_sterne_caugek_hors_repro.rdata")
   # geom_sf(data = migralion_obs %>% filter(species_name == species)) +
   # geom_sf(data = pelmed_obs %>% filter(species_name == species)) +
   # geom_sf(data = pnm_obs %>% filter(species_name == species)) +

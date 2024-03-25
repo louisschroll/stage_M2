@@ -84,7 +84,7 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
 }
 
 
-make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F, is_plot_returned=T, subtitle = NULL){
+make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F, subtitle = NULL){
   grid_pred <- grid %>% 
     as_tibble() %>% 
     select(all_of(selected_cov))
@@ -104,7 +104,6 @@ make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F,
   mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
   sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
   
-  if (is_plot_returned){
     psi <- ggplot() + 
       geom_sf(data = grid, aes(fill = mean.psi), color = NA) +
       geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
@@ -137,15 +136,33 @@ make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F,
             axis.text = element_text(size = 8))
     
     return(list(psi = psi, sdpsi = sdpsi))
-  }
-  else {
-    grid$mean.psi <- mean.psi
-    grid$sd.psi <- sd.psi
-    return(grid)
-  }
+  
 }
 
 
-
+put_results_in_grid <- function(grid, model_result, selected_cov, add_spatial=F){
+  grid_pred <- grid %>% 
+    as_tibble() %>% 
+    select(all_of(selected_cov))
+  
+  intercept <- mean(model_result$beta.samples[,1])
+  
+  X.0 <- cbind(intercept, grid_pred)
+  
+  if (add_spatial){
+    coords.0 <- get_coords(grid)
+    out.int.pred <- predict(model_result, as.matrix(X.0), coords.0)
+  }
+  else {
+    out.int.pred <- predict(model_result, as.matrix(X.0))
+  }
+  
+  mean.psi = apply(out.int.pred$psi.0.samples, 2, mean)
+  sd.psi = apply(out.int.pred$psi.0.samples, 2, sd)
+  
+  grid$mean.intensity <- mean.psi
+  grid$sd.intensity <- sd.psi
+  return(grid)
+}
 
 

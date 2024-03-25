@@ -75,7 +75,7 @@ find_intersecting_cells <- function(sampling_points, grid){
     as.data.frame() %>%
     pull(id) %>%
     unique() 
-
+  
   return(intersection)
 }
 
@@ -127,7 +127,7 @@ get_y_and_detcov <- function(obs_data, eff_data, gridocc, sitesocc_id){
   
   intersect_obs <- st_intersection(obs_data, occurence_df) 
   intersect_eff <- st_intersection(eff_data, occurence_df) 
-
+  
   occurence_list = c()
   effort_list = c()
   store_session = c()
