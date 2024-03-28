@@ -1,4 +1,17 @@
+# HEADER ------------------------------------------------------------------------
+#
+# Script name:  ~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R
+# Author:       Louis Schroll
+# Email:        louis.schroll@ens-lyon.fr
+# Date:         2024-03-28
+#
+# Script description:
+#
+#
+# -------------------------------------------------------------------------------
 
+cat("\014")              # clear the console
+rm(list = ls())          # remove all variables of the work space
 
 
 # ---- Prepare data for N-mixture ----
@@ -26,26 +39,32 @@ prepare_data_for_int_nmix <- function(data_list, grid, species, selected_cov){
   #   transect_length = .x %>% select(starts_with("transect_length")) %>% scale(),
   #   session = .x %>% select(starts_with("session")))})
   
-  effort_list <- map(nmix_tibble_list, ~{.x %>% select(starts_with("transect_length"))})
+  effort_list <- map(nmix_tibble_list, 
+                     ~{.x %>% select(starts_with("transect_length")) %>% 
+                         mutate(row_nb = 1:nrow(.)) %>% 
+                         pivot_longer(-row_nb) %>%
+                         mutate(value = (value - mean(value))/sd(value)) %>%
+                         pivot_wider(names_from = name, values_from = value) %>%
+                         select(-row_nb) %>% 
+                         as.matrix()
+                       })
   
-   nmix_data_list <- list(
-    effectif = Nmix_data_tibble %>% select(starts_with("effectif")),
-    occurence.cov = occurence_cov_df,
-    
-    )
-   
    nmix_constants_list <- list(
-     sites_id = id_list,
-     XN = occurence_cov_df,
+     site_id = id_list,
+     XN = as.matrix(occurence_cov_df),
      transect_length = effort_list,
      # detection.cov = list(
      #   transect_length = Nmix_data_tibble %>% select(starts_with("transect_length")),
      #   session = Nmix_data_tibble %>% select(starts_with("session")))
-     nsites = sapply(effectif_list, nrow),
-     nreplicates = sapply(effectif_list, ncol),
+     nsites = sapply(effectif_list, nrow) %>% unname(),
+     nreplicates = sapply(effectif_list, ncol)  %>% unname(),
      n.occ.cov = ncol(occurence_cov_df)
    )
+   
+   return(list(constants = nmix_constants_list, data = effectif_list))
 }
+
+
 prepare_tibble_for_nmix <- function(data, grid, species){
   filtered_data <- filter_one_species(data, species)
 
@@ -62,6 +81,7 @@ prepare_tibble_for_nmix <- function(data, grid, species){
   
   return(Nmix_data_tibble)
 }
+
 
 filter_one_species <- function(data, species){
     obs = data$obs %>% filter(species_name == species)
@@ -124,7 +144,6 @@ get_count_and_effort <- function(data, grid){
   }
   return(sampled_gridcells)
 }
-
 
 
 prepare_data_for_Nmixture <- function(data, grid, species, selected_cov){

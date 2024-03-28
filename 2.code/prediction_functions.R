@@ -89,9 +89,13 @@ make_predictive_map <- function(model_result, grid, selected_cov, add_spatial=F,
     as_tibble() %>% 
     select(all_of(selected_cov))
   
+<<<<<<< HEAD
+  X.0 <- cbind(1, grid_pred)
+=======
   intercept <- mean(model_result$beta.samples[,1])
   
   X.0 <- cbind(intercept, grid_pred)
+>>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
   
   if (add_spatial){
     coords.0 <- get_coords(grid)
@@ -145,9 +149,13 @@ put_results_in_grid <- function(grid, model_result, selected_cov, add_spatial=F)
     as_tibble() %>% 
     select(all_of(selected_cov))
   
+<<<<<<< HEAD
+  X.0 <- cbind(1, grid_pred)
+=======
   intercept <- mean(model_result$beta.samples[,1])
   
   X.0 <- cbind(intercept, grid_pred)
+>>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
   
   if (add_spatial){
     coords.0 <- get_coords(grid)

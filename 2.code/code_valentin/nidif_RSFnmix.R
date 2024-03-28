@@ -717,14 +717,22 @@ caugekRSFIPP <- nimbleCode({
     betadcol_pop * dcol[1:nsites]
   
   # observation process
+<<<<<<< HEAD
+  logit(p[1:nsites, 1:nocc]) <- b[1] + b[2] * seff[1:nsites, 1:nocc]
+=======
   logit(p[1:nsites,1:nocc]) <- b[1] + b[2] * seff[1:nsites, 1:nocc]
+>>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
   
   for(i in 1:nsites){
     # likelihood
     N[i] ~ dpois(lambda[i])
     
     for(j in 1:nocc){
+<<<<<<< HEAD
+      nobs[i,j] ~ dbin(p[i,j], N[i])
+=======
       nobs[i,j] ~ dbin(p[i,j],N[i])
+>>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
     }
   } 
   

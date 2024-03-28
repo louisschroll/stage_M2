@@ -1,3 +1,18 @@
+# HEADER ------------------------------------------------------------------------
+#
+# Script name:  ~/stage_M2/2.code/pt2_telemetry_and_count/make_nmixture_model.R
+# Author:       Louis Schroll
+# Email:        louis.schroll@ens-lyon.fr
+# Date:         2024-03-28
+#
+# Script description:
+#
+#
+# -------------------------------------------------------------------------------
+
+cat("\014")              # clear the console
+rm(list = ls())          # remove all variables of the work space
+
 load("~/stage_M2/1.data/all_seabirds_counts.rdata")
 load("~/stage_M2/1.data/covariates_data.rdata")
 
@@ -23,7 +38,6 @@ data_nmix <- prepare_data_for_Nmixture(data, grid, species, selected_cov)
 
 # Nimble model
 Nmixture.model <- nimbleCode({
-
   # priors
   for(i in 1:n.occ.cov){
     a[i] ~ dnorm(0,1)
@@ -34,8 +48,6 @@ Nmixture.model <- nimbleCode({
   }
   
   # likelihood
-  # Occurence intensity
-  
   # detection proba
   logit(p[1:nsites,1:nreplicates]) <- b[1] + b[2] * transect_length[1:nsites, 1:nreplicates]
 
@@ -118,7 +130,6 @@ coda::effectiveSize(mcmc.output)
 
 MCMCvis::MCMCsummary(object = mcmc.output, round = 2,  params = c("a"))
 
-MCMCvis::MCMCtrace(mcmc.output)
 MCMCvis::MCMCtrace(object = mcmc.output,
                    pdf = FALSE, 
                    ind = TRUE, 
