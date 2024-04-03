@@ -455,6 +455,76 @@ migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="sterne 
 ```
 
 
+## Labbe
+
+Presence: y-round
+
+Reproduction: mars-avril à juillet
+
+**Split data:**
+
+  - **During repro: migralion, prenup sessions, Megaobs, spring sessions, Pelmed**
+  
+  - **Outside repro: migralion data postnup sessions, Megaobs data automn sessions, SAMM winter sessions**
+
+```{r}
+species <- "labbe pomarin"
+count_by_session(migralion_obs, species) #%>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) #%>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) #%>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr %in% c("labbe pomarin", "labbe parasite")
+                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    "labbe", species_name))
+```
+
+
+## Macareux moine
+
+Presence: 
+
+Reproduction: 
+
+
+
+```{r}
+species <- "macareux moine"
+count_by_session(migralion_obs, species) #%>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) #%>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) #%>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr == "macareux moine", 
+                                                    "macareux_moine_HR", species_name))
+```
+
+
+## Pinguouin torda
+
+Presence: 
+
+Reproduction: 
+
+
+```{r}
+species <- "macareux moine"
+count_by_session(migralion_obs, species) #%>% kable(format = "markdown", caption = "Migralion")
+count_by_session(samm_obs, species) #%>% kable(format = "markdown", caption = "SAMM")
+count_by_session(pelmed_obs, species) #%>% kable(format = "markdown", caption = "Pelmed")
+count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Megaobs - PNM")
+```
+
+```{r}
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr == "macareux moine", 
+                                                    "macareux_moine_HR", species_name))
+```
+
+
 # Save
 
 ```{r}

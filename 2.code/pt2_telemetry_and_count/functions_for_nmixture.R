@@ -10,9 +10,6 @@
 #
 # -------------------------------------------------------------------------------
 
-cat("\014")              # clear the console
-rm(list = ls())          # remove all variables of the work space
-
 
 # ---- Prepare data for N-mixture ----
 prepare_data_for_int_nmix <- function(data_list, grid, species, selected_cov){

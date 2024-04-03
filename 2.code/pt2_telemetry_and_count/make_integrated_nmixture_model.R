@@ -40,7 +40,7 @@ data_nmix <- prepare_data_for_int_nmix(data_list, grid, species, selected_cov)
 int.Nmixture.model <- nimbleCode({
   # priors
   for(i in 1:n.occ.cov){
-    a[i] ~ dnorm(0,1)
+    beta[i] ~ dnorm(0,1)
   }
   
   for(i in 1:2){
@@ -51,7 +51,7 @@ int.Nmixture.model <- nimbleCode({
   # likelihood
   # state process
   for(i in 1:nsites_total){
-    log(lambda[i]) <- sum(a[1:n.occ.cov] * XN[i,1:n.occ.cov])
+    log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
     N[i] ~ dpois(lambda[i])
   }
   
@@ -95,12 +95,12 @@ ff <- data_nmix$data$pelmed %>% mutate(cells_id = data_nmix$constants$site_id$pe
   arrange(by = cells_id) %>% 
   select(-cells_id)
   
-initial.values <- list(a = rnorm(n.occ.cov,0,1), 
+initial.values <- list(beta = rnorm(n.occ.cov,0,1), 
                        b1 = rnorm(2,0,1),
                        b2 = rnorm(2,0,1),
                        N = apply(ff, 1, function(x){sum(x, na.rm = T)}) + 1)
 
-parameters.to.save <- c("a", "b1", "lambda", "p1", "N")
+parameters.to.save <- c("beta", "b1", "lambda", "p1", "N")
 
 # Nombre d'iterations, burn-in et nombre de chaine
 n.iter <- 100000
@@ -150,14 +150,14 @@ mcmcplots::traplot(mcmc.output)
 mcmcplots::denplot(mcmc.output)
 coda::effectiveSize(mcmc.output)
 
-MCMCvis::MCMCsummary(object = mcmc.output, round = 2,  params = c("a"))
+MCMCvis::MCMCsummary(object = mcmc.output, round = 2,  params = c("beta"))
 
 MCMCvis::MCMCtrace(object = mcmc.output,
                    pdf = FALSE, 
                    ind = TRUE, 
                    Rhat = TRUE, 
                    n.eff = TRUE, 
-                   params = "a")
+                   params = "beta")
 
 # store results
 res_b0ipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
@@ -178,84 +178,32 @@ res_dcolipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
 
 coeff_values <- cbind(res_b0ipp, res_profipp, res_qprofipp, res_dcolipp)
 
-
-new_grid <- make_prediction(mcmc.output, grid, selected_cov)
-
-load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
-load("~/stage_M2/1.data/countLL.rdata")
-
-plot_prediction <- function(new_grid, add_colonies = F, species_colony=NULL){
-  mean_psi_plot <- ggplot() + 
-    geom_sf(data = new_grid, aes(fill = mean_psi), color = NA) +
-    scale_fill_distiller(palette = "Spectral",
-                         guide = guide_colorbar(ticks = FALSE,
-                                                barwidth = 9,
-                                                barheight = 0.7)) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    labs(title = "Intensity of space use") +
-    theme_bw() +
-    theme(legend.position = "top", legend.title = element_blank(),
-          plot.title = element_text(hjust = 0.5, face = "bold"))
+make_prediction <- function(mcmc.output, grid, selected_cov){
+  new_grid <- grid %>% select(all_of(selected_cov))
   
-  if (add_colonies){
-    mean_psi_plot <- mean_psi_plot +
-      geom_sf(data = countLL %>% filter(Species == species_colony) %>% st_crop(st_bbox(contour_golfe)),
-              pch = 16, size = 2)
-  }
-    
-  sd_psi_plot <- ggplot() + geom_sf(data = new_grid, aes(fill = sd_psi), color = NA) +
-    scale_fill_viridis_c(option = "inferno", 
-                         guide = guide_colorbar(ticks = FALSE,
-                                                barwidth = 9,
-                                                barheight = 0.7)) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    labs(title = "SD intensity") +
-    theme_bw() +
-    theme(legend.position = "top", legend.title = element_blank(),
-          plot.title = element_text(hjust = 0.5, face = "bold"))
+  coeff_values <- map(mcmc.output, ~{.x %>% as_tibble() %>%  select(starts_with("a"))}) %>% 
+    bind_rows() %>% 
+    as.matrix()
   
-  return(list(mean_psi_plot = mean_psi_plot, sd_psi_plot = sd_psi_plot))
+  occurence_covs <- new_grid %>% 
+    st_drop_geometry() %>% 
+    mutate(intercept = 1) %>% 
+    relocate(intercept) %>% 
+    as.matrix()
+  
+  psi_pred <- apply(occurence_covs, 1, function(occurence_row){
+    coeff_values %*% occurence_row
+  })
+  
+  new_grid$mean_psi <- apply(psi_pred, 2, mean)
+  new_grid$sd_psi <- apply(psi_pred, 2, sd)
+  return(new_grid)
 }
 
+new_grid <- make_prediction(mcmc.output, grid, selected_cov)
 
 plots <- plot_prediction(new_grid, add_colonies = T, species_colony = "Sterne caugek")
 library(patchwork)
 plots$mean_psi_plot + plots$sd_psi_plot
 
-
-
-
-
-
-
-
-
-
-# Nimble model
-int.Nmixture.model <- nimbleCode({
-  
-  # priors
-  for(i in 1:n.occ.cov){
-    a[i] ~ dnorm(0,1)
-  }
-  
-  for(i in 1:2){
-    b[i] ~ dnorm(0,1)
-  }
-  
-  # likelihood
-  for(ds in 1:ndatasets){
-    logit(p[[ds]][1:nsites[ds],1:nreplicates[ds]]) <- b[1] + b[2] * transect_length[[ds]][1:nsites[ds], 1:nreplicates[ds]]
-    for(i in 1:nsites[ds]){
-      # state process
-      log(lambda[site_id[i]]) <- sum(a[1:n.occ.cov] * XN[site_id[i],1:n.occ.cov])
-      N[site_id[i]] ~ dpois(lambda[site_id[i]])
-      # observation process
-      for(j in 1:nreplicates){
-        #logit(p[[ds]][i,j]) <- b[1] + b[2] * transect_length[[ds]][i, j]
-        nobs[[ds]][i,j] ~ dbin(p[[ds]][i,j],N[site_id[i]])
-      }
-    }
-  }
-})
 
