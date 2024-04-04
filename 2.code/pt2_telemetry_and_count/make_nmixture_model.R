@@ -25,7 +25,7 @@ source("~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R")
 # Prepare data
 species <- "sterne_caugek_R"
 
-data <- list(obs_data = pelmed_obs, effort_data = pelmed_eff)
+data_list <- list(obs_data = pelmed_obs, effort_data = pelmed_eff)
 
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
@@ -40,20 +40,20 @@ data_nmix <- prepare_data_for_Nmixture(data, grid, species, selected_cov)
 Nmixture.model <- nimbleCode({
   # priors
   for(i in 1:n.occ.cov){
-    a[i] ~ dnorm(0,1)
+    beta[i] ~ dnorm(0,1)
   }
 
   for(i in 1:2){
-    b[i] ~ dnorm(0,1)
+    alpha[i] ~ dnorm(0,1)
   }
   
   # likelihood
   # detection proba
-  logit(p[1:nsites,1:nreplicates]) <- b[1] + b[2] * transect_length[1:nsites, 1:nreplicates]
+  logit(p[1:nsites,1:nreplicates]) <- alpha[1] + alpha[2] * transect_length[1:nsites, 1:nreplicates]
 
   for(i in 1:nsites){
     # state process
-    log(lambda[i]) <- sum(a[1:n.occ.cov] * XN[i,1:n.occ.cov])
+    log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
     N[i] ~ dpois(lambda[i])
     
     # observation process
@@ -67,18 +67,18 @@ Nmixture.model <- nimbleCode({
 XN = data_nmix$occurence.cov
 n.occ.cov <- ncol(XN)
 my.constants <- list(XN = XN,
-                    transect_length = scale(data_nmix$detection.cov$transect_length),
+                    transect_length = data_nmix$detection.cov$transect_length,
                     nsites = nrow(data_nmix$effectif),
                     nreplicates = ncol(data_nmix$effectif),
                     n.occ.cov = n.occ.cov)
 
 my.data <- list(nobs = data_nmix$effectif)
 
-initial.values <- list(a = rnorm(n.occ.cov,0,1), 
-                       b = rnorm(2,0,1), 
-                       N = apply(data_nmix$effectif,1,sum)+1)
+initial.values <- list(beta = rnorm(n.occ.cov, 0, 1), 
+                       alpha = rnorm(2, 0, 1), 
+                       N = apply(data_nmix$effectif, 1, sum) + 1)
 
-parameters.to.save <- c("a", "b", "lambda", "p", "N")
+parameters.to.save <- c("beta", "alpha", "lambda", "p", "N")
 
 # Nombre d'iterations, burn-in et nombre de chaine
 n.iter <- 510000

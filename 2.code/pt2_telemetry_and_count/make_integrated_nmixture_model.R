@@ -20,7 +20,7 @@ load("~/stage_M2/1.data/covariates_data.rdata")
 library(tidyverse)
 library(sf)
 library(nimble)
-source("~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R")
+source("~/stage_M2/2.code/pt2_telemetry_and_count/prepare_data_Nmix.R")
 
 # Prepare data
 species <- "sterne_caugek_R"
@@ -34,7 +34,7 @@ grid <- covariates_data %>%
 
 selected_cov <- c("mean_CHL", "mean_SST", "dist_to_shore")
 
-data_nmix <- prepare_data_for_int_nmix(data_list, grid, species, selected_cov)
+data_nmix <- prepare_data_Nmix(data_list, grid, species, selected_cov)
 
 # Nimble model
 int.Nmixture.model <- nimbleCode({
@@ -55,18 +55,18 @@ int.Nmixture.model <- nimbleCode({
     N[i] ~ dpois(lambda[i])
   }
   
-    logit(p1[1:nsites1,1:nreplicates1]) <- b1[1] + b1[2] * transect_length1[1:nsites1, 1:nreplicates1]
-    for(i in 1:nsites1){
+    logit(p1[1:nsites[1],1:nreplicates[1]]) <- b1[1] + b1[2] * transect_length1[1:nsites[1], 1:nreplicates[1]]
+    for(i in 1:nsites[1]){
       # observation process
-      for(j in 1:nreplicates1){
+      for(j in 1:nreplicates[1]){
         nobs1[i,j] ~ dbin(p1[i,j], N[site_id1[i]])
       }
     }
   
-    logit(p2[1:nsites2,1:nreplicates2]) <- b2[1] + b2[2] * transect_length2[1:nsites2, 1:nreplicates2]
-    for(i in 1:nsites2){
+    logit(p2[1:nsites[2],1:nreplicates[2]]) <- b2[1] + b2[2] * transect_length2[1:nsites[2], 1:nreplicates[2]]
+    for(i in 1:nsites[2]){
       # observation process
-      for(j in 1:nreplicates2){
+      for(j in 1:nreplicates[2]){
         nobs2[i,j] ~ dbin(p2[i,j], N[site_id2[i]])
       }
     }
@@ -81,10 +81,8 @@ constants <- list(XN = data_nmix$constants$XN,
                   site_id2 = data_nmix$constants$site_id$migralion,
                   transect_length1 = data_nmix$constants$transect_length$pelmed,
                   transect_length2 = data_nmix$constants$transect_length$migralion,
-                  nsites1 = data_nmix$constants$nsites[1],
-                  nsites2 = data_nmix$constants$nsites[2],
-                  nreplicates1 = data_nmix$constants$nreplicates[1],
-                  nreplicates2 = data_nmix$constants$nreplicates[2],
+                  nsites = data_nmix$constants$nsites,
+                  nreplicates = data_nmix$constants$nreplicates,
                   n.occ.cov = data_nmix$constants$n.occ.cov,
                   nsites_total = nsites_total)
 
