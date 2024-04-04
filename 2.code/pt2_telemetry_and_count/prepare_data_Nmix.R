@@ -11,116 +11,27 @@
 #' -------------------------------------------------------------------------------
 
 
-# ---- Prepare data for N-mixture ----
 prepare_data_Nmix <- function(data_list, grid, species, selected_cov){
   ndataset <- length(data_list)
-  
   if (ndataset == 1){
-    
-    data_nmix <- prepare_tibble_for_nmix(data_list[[1]], grid, species) %>% 
+    data_nmix <- filter_one_species(data_list[[1]], species) %>% 
+      get_count_and_effort(grid) %>% 
       prepare_data_for_1_dataset(selected_cov)
-    return(data_nmix)
-    
   } else {
-    
-    nmix_tibble_list <- map(data_list, ~{prepare_tibble_for_nmix(.x, grid, species)})
-    
-    common_sites <- map(nmix_tibble_list, function(x) select(x, all_of(c(selected_cov, "id")))) %>% 
-      bind_rows() %>% 
-      unique() %>% 
-      arrange(by = id)
-    
-    occurence_cov_matrix <- get_occ_cov(common_sites) 
-    
-    id_correspondance <- tibble(old_id = common_sites$id, new_id = 1:nrow(common_sites))
-    
-    id_list <- map(nmix_tibble_list, 
-                   ~{left_join(.x %>% select(id), id_correspondance, by = c("id" = "old_id")) %>% pull(new_id)})
-    
-    effectif_list <- map(nmix_tibble_list, get_effectif)
-    
-    effort_list <- map(nmix_tibble_list, get_and_scale_transect_length)
-    
-    nmix_constants_list <- list(
-      site_id = id_list,
-      XN = occurence_cov_matrix,
-      transect_length = effort_list,
-      nsites = sapply(effectif_list, nrow) %>% unname(),
-      nreplicates = sapply(effectif_list, ncol)  %>% unname(),
-      n.occ.cov = ncol(occurence_cov_matrix)
-    )
+    data_nmix <- map(data_list, 
+                     ~{filter_one_species(.x, species) %>% 
+                         get_count_and_effort(grid)}) %>% 
+      prepare_data_for_several_datasets(selected_cov)
   }
-  
-  n.occ.cov <- length(selected_cov) + 1
-  nsites_total <- data_nmix$constants$site_id %>% unlist() %>% n_distinct()
-  
-  constants <- list(XN = data_nmix$constants$XN,
-                    site_id1 = data_nmix$constants$site_id$pelmed,
-                    site_id2 = data_nmix$constants$site_id$migralion,
-                    transect_length1 = data_nmix$constants$transect_length$pelmed,
-                    transect_length2 = data_nmix$constants$transect_length$migralion,
-                    nsites = data_nmix$constants$nsites,
-                    #nsites2 = data_nmix$constants$nsites[2],
-                    nreplicates = data_nmix$constants$nreplicates,
-                    #nreplicates2 = data_nmix$constants$nreplicates[2],
-                    n.occ.cov = data_nmix$constants$n.occ.cov,
-                    nsites_total = nsites_total)
-  
-  N0 <- nmix_tibble_list %>%  
-    reduce(full_join, by = "id") %>% 
-    arrange(by = id) %>% 
-    select(starts_with("effectif")) %>% 
-    rowwise() %>%
-    mutate(total = sum(c_across(where(is.numeric)), na.rm = TRUE)+1) %>% 
-    pull(total)
-  
-  initial.values <- list(beta = rnorm(n.occ.cov,0,1), 
-                         b1 = rnorm(2,0,1),
-                         b2 = rnorm(2,0,1),
-                         N = N0)
-
-   return(list(constants = nmix_constants_list, data = effectif_list))
-}
-
-
-prepare_tibble_for_nmix <- function(data, grid, species){
-  filtered_data <- filter_one_species(data, species)
-  Nmix_data_tibble <- get_count_and_effort(filtered_data, grid) 
-  return(Nmix_data_tibble)
-}
-
-
-prepare_data_for_1_dataset <- function(nmix_tibble, selected_cov){
-  
-  effectif_df <- get_effectif(nmix_tibble)
-  
-  occurence_cov = get_occ_cov(nmix_tibble)
-  
-  n.occ.cov <- ncol(occurence_cov)
-  n.det.cov <- 2
-  
-  constants <- list(XN = occurence_cov,
-                    transect_length = get_and_scale_transect_length(nmix_tibble),
-                    nsites = nrow(effectif_df),
-                    nreplicates = ncol(effectif_df),
-                    n.occ.cov = n.occ.cov)
-  
-  
-  data <- list(nobs = effectif_df)
-  
-  initial.values <- list(beta = rnorm(n.occ.cov, 0, 1), 
-                         alpha = rnorm(n.det.cov, 0, 1), 
-                         N = apply(effectif_df, 1, sum) + 1)
-  
-  return(list(data = data, constants = constants, inits = initial.values))
+  return(data_nmix)
 }
 
 
 filter_one_species <- function(data, species){
-    obs = data$obs %>% filter(species_name == species)
-    session_w_obs <- obs %>% pull(session) %>% unique()
-    effort_data = data$eff %>% filter(session %in% session_w_obs)
-    return(list(obs = obs, eff = effort_data))
+  obs <- data$obs %>% filter(species_name == species)
+  session_w_obs <- obs %>% pull(session) %>% unique()
+  effort_data = data$eff %>% filter(session %in% session_w_obs)
+  return(list(obs = obs, eff = effort_data))
 }
 
 
@@ -156,7 +67,7 @@ get_count_and_effort <- function(data, grid){
       group_by(id) %>% 
       summarise(transect_length = sum(len))
     
-    # effectif df
+    # Retrieve effectif 
     effectif_df <- intersect_grid_obs %>%
       as_tibble() %>% 
       filter(session == sessionK) %>% 
@@ -170,18 +81,90 @@ get_count_and_effort <- function(data, grid){
       left_join(df_transect_length, by = join_by(id)) %>% 
       left_join(effectif_df, by = join_by(id)) %>% 
       mutate(effectif = ifelse(is.na(effectif), 0, effectif),
-             transect_length = ifelse(is.na(transect_length), 0, transect_length),
-             session = sessionK) %>% 
+             transect_length = ifelse(is.na(transect_length), 0, transect_length)) %>%
       rename_with(~ paste0(.x, as.character(sessionK), recycle0 = TRUE), 
-                  .cols = c(effectif, transect_length, session))
+                  .cols = c(effectif, transect_length))
   }
   return(sampled_gridcells)
+}
+
+
+prepare_data_for_1_dataset <- function(nmix_tibble, selected_cov){
+  n.occ.cov <- length(selected_cov) + 1
+  n.det.cov <- 2
+  # Get count data
+  effectif_df <- get_effectif(nmix_tibble)
+  data <- list(nobs = effectif_df)
+  
+  # Set initial values
+  initial.values <- list(beta = rnorm(n.occ.cov, 0, 1), 
+                         alpha = rnorm(n.det.cov, 0, 1), 
+                         N = apply(effectif_df, 1, sum) + 1)
+  
+  # Get constants
+  constants <- list(XN = get_occ_cov(nmix_tibble),
+                    transect_length = get_and_scale_transect_length(nmix_tibble),
+                    nsites = nrow(effectif_df),
+                    nreplicates = ncol(effectif_df),
+                    n.occ.cov = n.occ.cov)
+  
+  return(list(data = data, constants = constants, inits = initial.values))
+}
+
+
+prepare_data_for_several_datasets <- function(nmix_tibble_list, selected_cov){
+  n.occ.cov <- length(selected_cov) + 1
+  
+  # Get the observation data
+  data <- map_and_rename_list(nmix_tibble_list, get_effectif, "nobs")
+  
+  # Set initial values
+  N0 <- nmix_tibble_list %>%
+    reduce(full_join, by = "id") %>%
+    arrange(id) %>%
+    select(starts_with("effectif")) %>%
+    rowSums(na.rm = TRUE) + 1
+    # to replace sum by max:
+    # rowwise() %>%
+    # mutate(total = max(c_across(where(is.numeric)), na.rm = TRUE)+1) %>% 
+    # pull(total)
+  
+  initial.values <- list(beta = rnorm(n.occ.cov,0,1), 
+                         alpha1 = rnorm(2,0,1),
+                         alpha2 = rnorm(2,0,1),
+                         N = N0)
+  
+  # Get the constants
+  sampled_sites <- map(nmix_tibble_list, function(x) select(x, all_of(c(selected_cov, "id")))) %>% 
+    bind_rows() %>% 
+    unique() %>% 
+    arrange(by = id)
+  
+  constants <- c(list(XN = get_occ_cov(sampled_sites)),
+                 get_id_for_each_dataset(nmix_tibble_list, sampled_sites$id), 
+                 map_and_rename_list(nmix_tibble_list, get_and_scale_transect_length, "transect_length"),
+                 map_and_rename_list(data, nrow, "nsites"), 
+                 map_and_rename_list(data, ncol, "nreplicates"),
+                 list(n.occ.cov = n.occ.cov,
+                      nsites_total = nrow(sampled_sites)))
+  
+  return(list(data = data, constants = constants, inits = initial.values))
 }
 
 
 get_effectif <- function(nmix_tibble){
   nmix_tibble %>% select(starts_with("effectif"))
 }
+
+
+get_occ_cov <- function(nmix_tibble){
+  nmix_tibble %>% 
+    select(all_of(selected_cov)) %>% 
+    mutate(intersect = 1) %>% 
+    relocate(intersect) %>% 
+    as.matrix()
+}
+
 
 get_and_scale_transect_length <- function(nmix_tibble){
   nmix_tibble %>% 
@@ -196,10 +179,21 @@ get_and_scale_transect_length <- function(nmix_tibble){
 }
 
 
-get_occ_cov <- function(nmix_tibble){
-  nmix_tibble %>% 
-    select(all_of(selected_cov)) %>% 
-    mutate(intersect = 1) %>% 
-    relocate(intersect) %>% 
-    as.matrix()
+get_id_for_each_dataset <- function(nmix_tibble_list, sampled_sites_id){
+  id_correspondance <- tibble(old_id = sampled_sites_id, new_id = 1:length(sampled_sites_id))
+  
+  new_sites_id <- map_and_rename_list(nmix_tibble_list,
+                                      ~{left_join(.x %>% select(id), id_correspondance, by = c("id" = "old_id")) %>% pull(new_id)}, 
+                                      "site_id")
+  return(new_sites_id)
 }
+
+
+map_and_rename_list <- function(list, func_to_map, new_name){
+  mapped_list <- map(list, func_to_map)
+  names(mapped_list) <- paste0(new_name, 1:length(mapped_list))
+  return(mapped_list)
+}
+
+
+

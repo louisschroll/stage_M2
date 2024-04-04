@@ -44,8 +44,8 @@ int.Nmixture.model <- nimbleCode({
   }
   
   for(i in 1:2){
-    b1[i] ~ dnorm(0,1)
-    b2[i] ~ dnorm(0,1)
+    alpha1[i] ~ dnorm(0,1)
+    alpha2[i] ~ dnorm(0,1)
   }
   
   # likelihood
@@ -55,50 +55,25 @@ int.Nmixture.model <- nimbleCode({
     N[i] ~ dpois(lambda[i])
   }
   
-    logit(p1[1:nsites[1],1:nreplicates[1]]) <- b1[1] + b1[2] * transect_length1[1:nsites[1], 1:nreplicates[1]]
-    for(i in 1:nsites[1]){
+    logit(p1[1:nsites1,1:nreplicates1]) <- alpha1[1] + alpha1[2] * transect_length1[1:nsites1, 1:nreplicates1]
+    for(i in 1:nsites1){
       # observation process
-      for(j in 1:nreplicates[1]){
+      for(j in 1:nreplicates1){
         nobs1[i,j] ~ dbin(p1[i,j], N[site_id1[i]])
       }
     }
   
-    logit(p2[1:nsites[2],1:nreplicates[2]]) <- b2[1] + b2[2] * transect_length2[1:nsites[2], 1:nreplicates[2]]
-    for(i in 1:nsites[2]){
+    logit(p2[1:nsites2,1:nreplicates2]) <- alpha2[1] + alpha2[2] * transect_length2[1:nsites2, 1:nreplicates2]
+    for(i in 1:nsites2){
       # observation process
-      for(j in 1:nreplicates[2]){
+      for(j in 1:nreplicates2){
         nobs2[i,j] ~ dbin(p2[i,j], N[site_id2[i]])
       }
     }
 })
 
 # Prepare data
-n.occ.cov <- length(selected_cov) + 1
-nsites_total <- data_nmix$constants$site_id %>% unlist() %>% n_distinct()
-
-constants <- list(XN = data_nmix$constants$XN,
-                  site_id1 = data_nmix$constants$site_id$pelmed,
-                  site_id2 = data_nmix$constants$site_id$migralion,
-                  transect_length1 = data_nmix$constants$transect_length$pelmed,
-                  transect_length2 = data_nmix$constants$transect_length$migralion,
-                  nsites = data_nmix$constants$nsites,
-                  nreplicates = data_nmix$constants$nreplicates,
-                  n.occ.cov = data_nmix$constants$n.occ.cov,
-                  nsites_total = nsites_total)
-
-
-
-ff <- data_nmix$data$pelmed %>% mutate(cells_id = data_nmix$constants$site_id$pelmed) %>% 
-  full_join(data_nmix$data$migralion %>% mutate(cells_id = data_nmix$constants$site_id$migralion), by = join_by(cells_id)) %>% 
-  arrange(by = cells_id) %>% 
-  select(-cells_id)
-  
-initial.values <- list(beta = rnorm(n.occ.cov,0,1), 
-                       b1 = rnorm(2,0,1),
-                       b2 = rnorm(2,0,1),
-                       N = apply(ff, 1, function(x){sum(x, na.rm = T)}) + 1)
-
-parameters.to.save <- c("beta", "b1", "lambda", "p1", "N")
+parameters.to.save <- c("beta", "alpha1", "lambda", "p1", "N")
 
 # Nombre d'iterations, burn-in et nombre de chaine
 n.iter <- 100000
@@ -118,13 +93,12 @@ n.chains <- 2
 
 # In several step
 Rmodelo <- nimbleModel(code = int.Nmixture.model, 
-                       constants = constants,
-                       data = list(nobs1 = data_nmix$data$pelmed, nobs2 = data_nmix$data$migralion), 
-                       inits = initial.values)
+                       constants = data_nmix$constants,
+                       data = data_nmix$data, 
+                       inits = data_nmix$inits)
 
 Rmodelo$initializeInfo()
 Rmodelo$calculate()
-Rmodelo$logProb_nobs2 %>% as_tibble() %>% print(n = 15)
 # configure model
 confo <- configureMCMC(Rmodelo)
 #confo$printSamplers()
