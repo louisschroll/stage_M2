@@ -18,7 +18,7 @@ library(tidyverse)
 
 load("1.data/RSF_data_sandwich_tern.rdata")
 df_RSF <- df_RSF %>% filter(individual_id %in% 1:3)
-
+selected_cov <- c("mean_SST")
 # Run
 samplesRSF <- run_RSF(df_RSF, selected_cov)
 

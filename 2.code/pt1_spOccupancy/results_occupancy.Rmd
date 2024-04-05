@@ -26,8 +26,8 @@ load("~/stage_M2/1.data/all_seabirds_counts.rdata")
 load("~/stage_M2/1.data/covariates_data.rdata")
 load("~/stage_M2/1.data/countLL.rdata")
 
-source("~/stage_M2/2.code/prediction_functions.R")
-source("~/stage_M2/2.code/plot_functions.R")
+source("~/stage_M2/2.code/pt1_spOccupancy/prediction_functions.R")
+source("~/stage_M2/2.code/pt1_spOccupancy/plot_functions.R")
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs))

@@ -26,7 +26,8 @@ source("~/stage_M2/2.code/pt2_telemetry_and_count/prepare_data_Nmix.R")
 species <- "sterne_caugek_R"
 
 data_list <- list(pelmed = list(obs_data = pelmed_obs, effort_data = pelmed_eff), 
-                  migralion = list(obs_data = migralion_obs, effort_data = migralion_eff))
+                  migralion = list(obs_data = migralion_obs, effort_data = migralion_eff),
+                  pnm = list(obs_data = pnm_obs, effort_data = pnm_eff))
 
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
@@ -46,6 +47,7 @@ int.Nmixture.model <- nimbleCode({
   for(i in 1:2){
     alpha1[i] ~ dnorm(0,1)
     alpha2[i] ~ dnorm(0,1)
+    alpha3[i] ~ dnorm(0,1)
   }
   
   # likelihood
@@ -70,10 +72,17 @@ int.Nmixture.model <- nimbleCode({
         nobs2[i,j] ~ dbin(p2[i,j], N[site_id2[i]])
       }
     }
+    
+    logit(p3[1:nsites3,1:nreplicates3]) <- alpha3[1] + alpha3[2] * transect_length3[1:nsites3, 1:nreplicates3]
+    for(i in 1:nsites3){
+      # observation process
+      for(j in 1:nreplicates3){
+        nobs3[i,j] ~ dbin(p3[i,j], N[site_id3[i]])
+      }
+    }
 })
 
-# Prepare data
-parameters.to.save <- c("beta", "alpha1", "lambda", "p1", "N")
+parameters.to.save <- c("beta", "alpha1","alpha2", "lambda", "p1", "N")
 
 # Nombre d'iterations, burn-in et nombre de chaine
 n.iter <- 100000
@@ -81,15 +90,15 @@ n.burnin <- 10000
 n.chains <- 2
 
 # In one step
-# mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
-#                           data = my.data,
-#                           constants = my.constants,
-#                           inits = initial.values,
-#                           monitors = parameters.to.save,
-#                           niter = n.iter,
-#                           nburnin = n.burnin,
-#                           nchains = n.chains, 
-#                           samplesAsCodaMCMC = TRUE)
+mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
+                          data = data_nmix$data,
+                          constants = data_nmix$constants,
+                          inits = data_nmix$inits,
+                          monitors = parameters.to.save,
+                          niter = n.iter,
+                          nburnin = n.burnin,
+                          nchains = n.chains,
+                          samplesAsCodaMCMC = TRUE)
 
 # In several step
 Rmodelo <- nimbleModel(code = int.Nmixture.model, 
@@ -106,7 +115,7 @@ confo <- configureMCMC(Rmodelo)
 #confo$addSampler("a[1]", "a[2]", type = "RW_block")
 #confo$addSampler("b[1]", "b[2]", type = "RW_block")
 ## Build and compile MCMC
-Rmcmco <- buildMCMC(confo)
+Rmcmco <- buildMCMC(confo, monitors = parameters.to.save)
 Cmodelo <- compileNimble(Rmodelo)
 Cmcmco <- compileNimble(Rmcmco, project = Cmodelo)
 
@@ -124,58 +133,44 @@ coda::effectiveSize(mcmc.output)
 
 MCMCvis::MCMCsummary(object = mcmc.output, round = 2,  params = c("beta"))
 
-MCMCvis::MCMCtrace(object = mcmc.output,
-                   pdf = FALSE, 
-                   ind = TRUE, 
-                   Rhat = TRUE, 
-                   n.eff = TRUE, 
-                   params = "beta")
-
-# store results
-res_b0ipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
-  as_tibble()%>%
-  dplyr::select(starts_with("a[1]"))
-
-res_profipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
-  as_tibble()%>%
-  select(starts_with("a[2]"))
-
-res_qprofipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
-  as_tibble() %>%
-  dplyr::select(starts_with("a[3]"))
-
-res_dcolipp <- rbind(mcmc.output$chain1, mcmc.output$chain2) %>%
-  as_tibble() %>%
-  dplyr::select(starts_with("a[4]"))
-
-coeff_values <- cbind(res_b0ipp, res_profipp, res_qprofipp, res_dcolipp)
-
-make_prediction <- function(mcmc.output, grid, selected_cov){
-  new_grid <- grid %>% select(all_of(selected_cov))
-  
-  coeff_values <- map(mcmc.output, ~{.x %>% as_tibble() %>%  select(starts_with("a"))}) %>% 
-    bind_rows() %>% 
-    as.matrix()
-  
-  occurence_covs <- new_grid %>% 
-    st_drop_geometry() %>% 
-    mutate(intercept = 1) %>% 
-    relocate(intercept) %>% 
-    as.matrix()
-  
-  psi_pred <- apply(occurence_covs, 1, function(occurence_row){
-    coeff_values %*% occurence_row
-  })
-  
-  new_grid$mean_psi <- apply(psi_pred, 2, mean)
-  new_grid$sd_psi <- apply(psi_pred, 2, sd)
-  return(new_grid)
-}
-
 new_grid <- make_prediction(mcmc.output, grid, selected_cov)
 
 plots <- plot_prediction(new_grid, add_colonies = T, species_colony = "Sterne caugek")
 library(patchwork)
 plots$mean_psi_plot + plots$sd_psi_plot
 
+
+samples <- do.call(rbind, mcmc.output)    # single matrix of samples
+waic <- calculateWAIC(samples, Rmodelo)
+print(waic)
+
+
+
+
+# Nimble model
+int.Nmixture.model <- nimbleCode({
+  # Priors
+  for(i in 1:n.occ.cov){
+    beta[i] ~ dnorm(0,1)
+  }
+  
+  for(i in 1:2){
+    for (nd in 1:ndataset){
+      alpha[i, nd] ~ dnorm(0,1)
+    }
+  }
+  
+  # Likelihood
+  # State process
+  for(i in 1:nsites_total){
+    log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
+    N[i] ~ dpois(lambda[i])
+  }
+  
+  # Observation process
+  for (i in 1:nsampled_points){
+    logit(p[i]) <- alpha[1, dataset[i]] + alpha1[2, dataset[i]] * transect_length[i]
+    nobs[i] ~ dbin(p[i], N[site_id[i]])
+  }
+})
 

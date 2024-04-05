@@ -80,7 +80,7 @@ get_count_and_effort <- function(data, grid){
     sampled_gridcells <- sampled_gridcells %>% 
       left_join(df_transect_length, by = join_by(id)) %>% 
       left_join(effectif_df, by = join_by(id)) %>% 
-      mutate(effectif = ifelse(is.na(effectif), 0, effectif),
+      mutate(effectif = ifelse(is.na(effectif) & !is.na(transect_length), 0, effectif),
              transect_length = ifelse(is.na(transect_length), 0, transect_length)) %>%
       rename_with(~ paste0(.x, as.character(sessionK), recycle0 = TRUE), 
                   .cols = c(effectif, transect_length))
@@ -128,11 +128,13 @@ prepare_data_for_several_datasets <- function(nmix_tibble_list, selected_cov){
     # rowwise() %>%
     # mutate(total = max(c_across(where(is.numeric)), na.rm = TRUE)+1) %>% 
     # pull(total)
+  ndatasets <- length(data)
+  alpha_list <- replicate(ndatasets, rnorm(2), simplify = FALSE)
+  names(alpha_list) <- paste0("alpha", 1:ndatasets)
   
-  initial.values <- list(beta = rnorm(n.occ.cov,0,1), 
-                         alpha1 = rnorm(2,0,1),
-                         alpha2 = rnorm(2,0,1),
-                         N = N0)
+  initial.values <- c(list(beta = rnorm(n.occ.cov,0,1)), 
+                      alpha_list,
+                      list(N = N0))
   
   # Get the constants
   sampled_sites <- map(nmix_tibble_list, function(x) select(x, all_of(c(selected_cov, "id")))) %>% 

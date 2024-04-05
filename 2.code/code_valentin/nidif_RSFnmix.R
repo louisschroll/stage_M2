@@ -717,22 +717,13 @@ caugekRSFIPP <- nimbleCode({
     betadcol_pop * dcol[1:nsites]
   
   # observation process
-<<<<<<< HEAD
   logit(p[1:nsites, 1:nocc]) <- b[1] + b[2] * seff[1:nsites, 1:nocc]
-=======
-  logit(p[1:nsites,1:nocc]) <- b[1] + b[2] * seff[1:nsites, 1:nocc]
->>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
-  
   for(i in 1:nsites){
     # likelihood
     N[i] ~ dpois(lambda[i])
     
     for(j in 1:nocc){
-<<<<<<< HEAD
       nobs[i,j] ~ dbin(p[i,j], N[i])
-=======
-      nobs[i,j] ~ dbin(p[i,j],N[i])
->>>>>>> f1301e94a0684516157f266cd584ce3e7df90eb6
     }
   } 
   
@@ -749,7 +740,6 @@ caugekRSFIPP <- nimbleCode({
   #intRSF ~ dnorm(0,1)
   
   for( i in 1:nindividual){
-    
     ### PRIORS ###
     ## habitat cov
     beta_prof[i] ~ dnorm(betaprof_pop,sd = tauprof_pop)
@@ -761,7 +751,6 @@ caugekRSFIPP <- nimbleCode({
   
   # ll
   for(t in 1:npts){
-    
     logit(omega[t]) <- beta_0[idind[t]] +
       beta_prof[idind[t]] * profRSF[t] + 
       beta_qprof[idind[t]] *profRSF [t] * profRSF[t] +
@@ -815,7 +804,8 @@ inits.int <-  list(beta_0 =     rep(0, nindividual),
                    betaqprof_pop = 0 , tauqprof_pop = runif(1,0,5),
                    betadcol_pop = 0 , taudcol_pop = runif(1,0,5),
                    beta0_pop = 0,
-                   intIPP = rnorm(1,0,1), b = rnorm(2,0,1), N = Ninit)
+                   intIPP = rnorm(1,0,1), b = rnorm(2,0,1), 
+                   N = Ninit)
 
 # Nimble pre run
 Rmodel3 <- nimbleModel(code= caugekRSFIPP, constants = constants.int,
