@@ -106,7 +106,7 @@ samm_eff <- effsamm %>%
          glareFrom, glareTo, glareSever, cloudCover, lat, lon, speed, altitude,
          aircraft, seaStIndex, geometry) %>% 
   mutate(year = lubridate::year(date),
-         session = as.factor(nom_suivi),
+         session = as.factor(nom_suivi %>% str_remove("_")),
          transect_name = 1:nrow(.),
          Time = scale(as.Date(DATE_TIME1))) %>% 
   st_transform(crs = ref_coordinate_system)
@@ -131,7 +131,7 @@ pnm_eff <- transect %>%
   select(date_tr, long_m, camp, geometry) %>% 
   rename(date = date_tr) %>% 
   mutate(year = year(date),
-         session = as.factor(camp),
+         session = as.factor(camp %>% str_remove("_")),
          transect_name = 1:nrow(.)) 
 
 
@@ -153,15 +153,15 @@ load("~/stage_M2/1.data/postnup2022.rdata")
 load("~/stage_M2/1.data/postnup2023.rdata")
 load("~/stage_M2/1.data/prenup2023.rdata")
 
-session_migralion <- c(rep("prenup_2022_A", 3), rep("prenup_2022_B", 4), 
-                       rep("postnup_2022_A", 5), rep("postnup_2022_B", 6), 
-                       rep("prenup_2023_A", 6), rep("prenup_2023_B", 7), 
-                       rep("postnup_2023_A", 7), rep("prenup_2023_B", 5))
+# session_migralion <- c(rep("prenup_2022_A", 3), rep("prenup_2022_B", 4), 
+#                        rep("postnup_2022_A", 5), rep("postnup_2022_B", 6), 
+#                        rep("prenup_2023_A", 6), rep("prenup_2023_B", 7), 
+#                        rep("postnup_2023_A", 7), rep("prenup_2023_B", 5))
 
-session_migralion <- c(rep("prenup_2022", 7), 
-                       rep("postnup_2022", 11), 
-                       rep("prenup_2023", 13), 
-                       rep("postnup_2023", 12))
+session_migralion <- c(rep("prenup2022", 7), 
+                       rep("postnup2022", 11), 
+                       rep("prenup2023", 13), 
+                       rep("postnup2023", 12))
 
 migralion_eff <- prenup22_eff %>% 
   bind_rows(postnup2022_eff, prenup2023_eff, postnup2023_eff) %>% 

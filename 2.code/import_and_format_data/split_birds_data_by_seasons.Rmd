@@ -76,7 +76,7 @@ pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan
                                                     "fou_de_bassan_HR", species_name))
 
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="fou de bassan",
-                                                    #& session %in% c("prenup_2022", "prenup_2023"), 
+                                                    #& session %in% c("prenup2022", "prenup2023"), 
                                                     "fou_de_bassan_HR", species_name))
 ```
 
@@ -119,12 +119,12 @@ split_periods <- function(data_obs, species, session_repro, session_HR){
 }
 
 migralion_obs <- split_periods(migralion_obs, species="goeland leucophee", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
+              session_repro = c("prenup2022", "prenup2023"), 
+              session_HR = c("postnup2022", "postnup2023"))
 
 pnm_obs <- split_periods(pnm_obs, "goeland leucophee", 
-              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
-              session_HR = c("2019_automne", "2020_automne"))
+              session_repro = c("2019printemps", "2020printemps", "2021printemps"), 
+              session_HR = c("2019automne", "2020automne"))
 
 pelmed_obs <- split_periods(pelmed_obs, "goeland leucophee", 
               session_repro = c("2017","2018", "2019", "2021"), 
@@ -133,7 +133,7 @@ pelmed_obs <- split_periods(pelmed_obs, "goeland leucophee",
 # pelmed_obs <- pelmed_obs %>% 
 #   mutate(species_name = ifelse(nom_fr=="goeland leucophee", "goeland_leucophee_R", species_name))
 
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM1(1winter)", "SAMM2(1winter)") 
                                                  & nom_fr == "goeland leucophee",
                                                  "goeland_leucophee_HR", species_name))
 ```
@@ -163,19 +163,19 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 ```{r}
 migralion_obs <- split_periods(migralion_obs, species="mouette melanocephale", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
+              session_repro = c("prenup2022", "prenup2023"), 
+              session_HR = c("postnup2022", "postnup2023"))
 
 
 pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette melanocephale" 
-                                                    & session %in% c("2019_automne", "2020_automne"), 
+                                                    & session %in% c("2019automne", "2020automne"), 
                                                     "mouette_melanocephale_HR", species_name))
 
 pelmed_obs <- split_periods(pelmed_obs, "mouette melanocephale", 
               session_repro = c("2017","2018", "2019", "2021"), 
               session_HR = c(""))
 
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM1(1winter)", "SAMM2(1winter)") 
                                                  & nom_fr == "mouette melanocephale",
                                                  "mouette_melanocephale_HR", species_name))
 ```
@@ -201,11 +201,11 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 ```
 
 ```{r}
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM1(1winter)", "SAMM2(1winter)") 
                                                  & nom_fr == "mouette pygmee",
                                                  "mouette_pygmee_HR", species_name))
 
-migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(session %in% c("prenup_2022", "prenup_2023") 
+migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(session %in% c("prenup2022", "prenup2023") 
                                                  & nom_fr == "mouette pygmee",
                                                  "mouette_pygmee_HR", species_name))
 ```
@@ -236,15 +236,15 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 ```{r}
 samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "mouette rieuse"
-                                                      & session %in% c("SAMM_1(1winter)","SAMM_2(1winter)"),
+                                                      & session %in% c("SAMM1(1winter)","SAMM2(1winter)"),
                                                  "mouette_rieuse_HR", species_name))
 
 pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse" 
-                                                    & session %in% c("2019_automne", "2020_automne"), 
+                                                    & session %in% c("2019automne", "2020automne"), 
                                                     "mouette_rieuse_HR", species_name))
 
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="mouette rieuse"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    & session %in% c("prenup2022", "prenup2023"), 
                                                     "mouette_rieuse_HR", species_name))
 ```
 
@@ -276,11 +276,11 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 ```{r}
 # samm_obs <- samm_obs %>% mutate(species_name = ifelse(nom_fr == "oceanite tempete"
-#                                                       & session == "SAMM_1(2summer)",
+#                                                       & session == "SAMM1(2summer)",
 #                                                  "oceanite_tempete", species_name))
 
 pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete", 
-                                                    #& session %in% c("2019_automne", "2020_automne"), 
+                                                    #& session %in% c("2019automne", "2020automne"), 
                                                     "oceanite_tempete", species_name))
 
 pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete" 
@@ -288,7 +288,7 @@ pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite temp
                                                     "oceanite_tempete", species_name))
 
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    & session %in% c("prenup2022", "prenup2023"), 
                                                     "oceanite_tempete", species_name))
 ```
 
@@ -318,18 +318,18 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 ```{r}
 migralion_obs <- split_periods(migralion_obs, species="petit puffin", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
+              session_repro = c("prenup2022", "prenup2023"), 
+              session_HR = c("postnup2022", "postnup2023"))
 
 pnm_obs <- split_periods(pnm_obs, "petit puffin", 
-              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
-              session_HR = c("2019_automne", "2020_automne"))
+              session_repro = c("2019printemps", "2020printemps", "2021printemps"), 
+              session_HR = c("2019automne", "2020automne"))
 
 pelmed_obs <- split_periods(pelmed_obs, "petit puffin", 
               session_repro = c("2017","2018", "2019", "2021"), 
               session_HR = c(""))
 
-samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM_1(1winter)", "SAMM_2(1winter)") 
+samm_obs <- samm_obs %>% mutate(species_name = ifelse(session %in% c("SAMM1(1winter)", "SAMM2(1winter)") 
                                                  & nom_fr == "petit puffin",
                                                  "petit_puffin_HR", species_name))
 ```
@@ -362,17 +362,17 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 ```{r}
 migralion_obs <- migralion_obs %>% 
   mutate(species_name = ifelse(nom_fr=="puffin de scopoli",
-                               #& session %in% c("postnup_2022", "postnup_2023"),
+                               #& session %in% c("postnup2022", "postnup2023"),
                                                     "puffin_de_scopoli_R", species_name))
   # split_periods(migralion_obs, species="mouette melanocephale", 
-  #             session_repro = c("prenup_2022", "prenup_2023"), 
-  #             session_HR = c("postnup_2022", "postnup_2023"))
+  #             session_repro = c("prenup2022", "prenup2023"), 
+  #             session_HR = c("postnup2022", "postnup2023"))
 
 
 pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="puffin de scopoli" 
-                                                    & session %in% c("2019_printemps", 
-                                                                     "2020_printemps", 
-                                                                     "2021_printemps"), 
+                                                    & session %in% c("2019printemps", 
+                                                                     "2020printemps", 
+                                                                     "2021printemps"), 
                                                     "puffin_de_scopoli_R", species_name))
 
 pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="puffin de scopoli",
@@ -403,12 +403,12 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 ```{r}
 migralion_obs <- split_periods(migralion_obs, species="sterne caugek", 
-              session_repro = c("prenup_2022", "prenup_2023"), 
-              session_HR = c("postnup_2022", "postnup_2023"))
+              session_repro = c("prenup2022", "prenup2023"), 
+              session_HR = c("postnup2022", "postnup2023"))
 
 pnm_obs <- split_periods(pnm_obs, "sterne caugek", 
-              session_repro = c("2019_printemps", "2020_printemps", "2021_printemps"), 
-              session_HR = c("2019_automne", "2020_automne"))
+              session_repro = c("2019printemps", "2020printemps", "2021printemps"), 
+              session_HR = c("2019automne", "2020automne"))
 
 pelmed_obs <- split_periods(pelmed_obs, "sterne caugek", 
               session_repro = c("2017","2018", "2019", "2021"), 
@@ -450,7 +450,7 @@ pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="sterne pierre
                                                     "sterne_pierregarin_R", species_name))
 
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="sterne pierregarin"
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    & session %in% c("prenup2022", "prenup2023"), 
                                                     "sterne_pierregarin_R", species_name))
 ```
 
@@ -477,7 +477,7 @@ count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Me
 
 ```{r}
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr %in% c("labbe pomarin", "labbe parasite")
-                                                    & session %in% c("prenup_2022", "prenup_2023"), 
+                                                    & session %in% c("prenup2022", "prenup2023"), 
                                                     "labbe", species_name))
 ```
 
