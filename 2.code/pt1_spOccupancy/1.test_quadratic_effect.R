@@ -19,13 +19,18 @@ library(sf)
 library(spOccupancy)
 library(openxlsx)
 
+# cluster adress
+adress <- "/lustre/schrolll/"
+# Local adress
+# adress <- ""
+
 # Load functions
-source("2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
-source("2.code/pt1_spOccupancy/model_selection_functions.R")
+source(paste0(adress, "2.code/pt1_spOccupancy/format_data_for_spOccupancy.R"))
+source(paste0(adress, "2.code/pt1_spOccupancy/model_selection_functions.R"))
 
 # Load data
-load("1.data/all_seabirds_counts.rdata")
-load("1.data/grid.rdata")
+load(paste0(adress, "1.data/all_seabirds_counts.rdata"))
+load(paste0(adress, "1.data/grid.rdata"))
 
 # Function to test quadratic and log effects
 test_quad_and_log <- function(data.int, species){
@@ -51,7 +56,7 @@ test_quad_and_log <- function(data.int, species){
   map(models_to_test, ~ test_and_write_models(cov_combination = .x, data.int = data.int, df_null_model))
   
   # Save the workbook
-  file_path <- paste0("3.results/model_selection/", 
+  file_path <- paste0(adress, "3.results/model_selection/", 
                       str_replace(species, " ","_"), 
                       "_1_test_log_quad.xlsx")
   saveWorkbook(wb, file_path, overwrite = TRUE)

@@ -20,7 +20,7 @@ load("~/stage_M2/1.data/covariates_data.rdata")
 library(tidyverse)
 library(sf)
 library(nimble)
-source("~/stage_M2/2.code/pt2_telemetry_and_count/functions_for_nmixture.R")
+source("~/stage_M2/2.code/pt2_telemetry_and_count/prepare_data_Nmix.R")
 
 # Prepare data
 species <- "sterne_caugek_R"

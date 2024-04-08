@@ -11,7 +11,7 @@
 #' -------------------------------------------------------------------------------
 
 
-prepare_data_Nmix <- function(data_list, grid, species, selected_cov){
+prepare_data_Nmix_V2 <- function(data_list, grid, species, selected_cov){
   ndataset <- length(data_list)
   if (ndataset == 1){
     data_nmix <- filter_one_species(data_list[[1]], species) %>% 
@@ -127,7 +127,7 @@ prepare_data_for_several_datasets <- function(nmix_tibble_list, selected_cov){
     mutate(dataset_nb = as.numeric(as.factor(dataset_nb)))
   
   # Get the observation data
-  data <- result_list$effectif
+  data <- list(nobs = result_list$effectif)
   
   # Set initial values
   N0 <- result_list %>% group_by(id) %>% 
