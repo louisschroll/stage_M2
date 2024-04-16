@@ -19,7 +19,7 @@
 #' -------------------------------------------------------------------------------
 
 
-make_prediction <- function(mcmc.output, grid, selected_cov, include_intercept=TRUE){
+make_prediction <- function(mcmc.output, grid, selected_cov, include_intercept=TRUE, rsf_intercept=NULL){
   new_grid <- grid %>% select(all_of(selected_cov))
   
   # Get coefficients values from mcmc output
@@ -28,7 +28,9 @@ make_prediction <- function(mcmc.output, grid, selected_cov, include_intercept=T
   } else {
     coeff_values <- map(mcmc.output, ~{.x %>% as_tibble() %>%  select(starts_with("beta"))}) %>% 
       bind_rows() %>% 
+      select(-all_of(c(rsf_intercept))) %>% 
       as.matrix()
+      
   }
   
   # Get covariates values within each cells of grid

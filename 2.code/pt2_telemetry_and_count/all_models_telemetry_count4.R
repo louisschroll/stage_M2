@@ -30,7 +30,7 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Prepare data
-species_vector <- c("puffin_de_scopoli_R")
+species_vector <- c("sterne_caugek_HR")
 
 data_list <- list(pelmed = list(obs_data = pelmed_obs, effort_data = pelmed_eff),
                   migralion = list(obs_data = migralion_obs, effort_data = migralion_eff),

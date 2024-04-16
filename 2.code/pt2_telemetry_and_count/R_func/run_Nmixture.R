@@ -11,9 +11,10 @@
 #' -------------------------------------------------------------------------------
 
 
-run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains = 3, comp_pvalues = F){
+run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains = 3, compute_pvalues = F){
   # Nimble code
-  if (comp_pvalues){
+  if (compute_pvalues){
+    data_nmix$constants$npoints_dataset <- c(0, table(data_nmix$constants$dataset_nb) %>% unname())
     # Version with bayesian p-values computation
     int.Nmixture.code <- nimbleCode({
       # Priors
@@ -48,16 +49,19 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
         E[i] <- pow((nobs[i] - exp_count[i]), 2) / (exp_count[i] + 0.005)
         
         ## Simulate new count from model
-        nobs.rep[i] ~ dbinom(p[i], N[site_id[i]])
+        nobs.rep[i] ~ dbin(p[i], N[site_id[i]])
         
         ## Discrepancy for the simulated data
         E.rep[i] <- pow((nobs.rep[i] - exp_count[i]), 2) / (exp_count[i] + 0.005)
       }
       
       # chi-squared test statistics
-      fit <- sum(E[1:nsampled_points])
-      fit.rep <- sum(E.rep[1:nsampled_points])
+      for (nd in 1:ndatasets){
+        fit[nd] <- sum(E[(1 + npoints_dataset[nd]):(npoints_dataset[nd+1] + npoints_dataset[nd])])
+        fit.rep[nd] <- sum(E.rep[(1 + npoints_dataset[nd]):(npoints_dataset[nd+1] + npoints_dataset[nd])])
+      }      
     })
+    parameters.to.save <- c("beta", "alpha", "fit", "fit.rep")
   }
   else {
     # Version without p-values computation
@@ -86,9 +90,11 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
         nobs[i] ~ dbin(p[i], N[site_id[i]])
       }
     })
+    
+    parameters.to.save <- c("beta", "alpha")
   }
   
-  # parameters.to.save <- c("beta", "alpha", "lambda", "p", "N")
+  
   
   # In one step
   # mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
@@ -110,7 +116,7 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
   int.Nmixture.model$initializeInfo()
   int.Nmixture.model$calculate()
   # Configure model
-  confo <- configureMCMC(int.Nmixture.model) #, monitors = parameters.to.save)
+  confo <- configureMCMC(int.Nmixture.model, monitors = parameters.to.save)
   
   ## Build and compile MCMC
   Rmcmco <- buildMCMC(confo)

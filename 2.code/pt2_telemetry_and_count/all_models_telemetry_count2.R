@@ -30,8 +30,7 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Prepare data
-species_vector <- c("petit_puffin_HR", "petit_puffin_R",
-                    "puffin_de_scopoli_R")
+species_vector <- c("goeland_leucophee_HR")
 
 data_list <- list(pelmed = list(obs_data = pelmed_obs, effort_data = pelmed_eff),
                   migralion = list(obs_data = migralion_obs, effort_data = migralion_eff),
@@ -74,7 +73,7 @@ file_rsf_data <- c("1.data/RSF_data_yellow_legged_gull.rdata",
                    "1.data/RSF_data_sandwich_tern.rdata",
                    "1.data/RSF_data_sandwich_tern.rdata")
 
-n.iter = 150000
+n.iter = 100000
 n.burnin = 0.1 * n.iter
 n.chains = 3
 
