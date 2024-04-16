@@ -14,7 +14,7 @@ source("~/stage_M2/2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
 source("~/stage_M2/2.code/pt1_spOccupancy/model_selection_functions.R")
 load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
 
-run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
+run_model_without_kfold <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE){
   # Wrapper for intPGOcc() function of spOccupancy
   # data_list:
   # selected_cov: a character vector with the covariates to include in the model
@@ -28,8 +28,8 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
   det.formula <- as.list(rep("~ scale(transect_length) + session", nb_datasets)) %>%  
     map(as.formula)
     
-    n.samples <- 10000
-    n.burn <- 1000
+  n.samples <- 20000
+  n.burn <- 0.1 * n.samples
     n.thin <- 1
     n.chains <- 3
     if (nb_datasets>1){
@@ -77,9 +77,9 @@ run_and_predict <- function(data.int = NULL, data_list = NULL, grid, species, se
                  n.chains = n.chains)
   }
   
-  predictive_map <- make_predictive_map(model_result, grid, selected_cov)
+  # predictive_map <- make_predictive_map(model_result, grid, selected_cov)
   
-  return(list(res = model_result, psi = predictive_map$psi, sdpsi = predictive_map$sdpsi))
+  return(model_result)
 }
 
 

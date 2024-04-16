@@ -53,12 +53,11 @@ test_all_models <- function(cov_combination, data.int){
     selected_cov <- model_result$beta.samples %>% as_tibble() %>% colnames()
     get_beta_values(model_result, selected_cov[-1], 
                     model_nb=paste(selected_cov[-1], 
-                                   collapse ="+"))}) %>% 
+                                   collapse =" + "))}) %>% 
     complete(covar, model, fill = list(beta = NA)) %>% 
-    pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") %>% 
-    select(-model)
-  
-    comparison_df <- bind_cols(comparison_df, beta_value_df)
+    pivot_wider(names_from = covar, values_from = c(beta, sd_beta), names_sep = "_") 
+    
+    comparison_df <- full_join(comparison_df, beta_value_df, by = "model")
   }
   return(list(comparison_df = comparison_df, model_result_list = model_result_list))
 }
@@ -94,8 +93,8 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_mod
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 20000
-    n.burn <- 3000
+    n.samples <- 15000
+    n.burn <- 0.1 * n.samples
     n.thin <- 1
     
     model_result <- intPGOcc(occ.formula = occ.formula,
@@ -170,8 +169,8 @@ run_non_int_model <- function(data, selected_cov){
   total_sites_nb <- nrow(data$occ.covs)
   det.formula <- ~ scale(transect_length) + session
   
-  n.samples <- 9000
-  n.burn <- 1500
+  n.samples <- 15000
+  n.burn <- 0.1 * n.samples
   n.thin <- 3
     
   data <- list(y = data$y[[1]], 
@@ -279,7 +278,7 @@ compute_bayesian_pvalue <- function(ppc.out){
 
 
 get_beta_values <- function(model_result, selected_cov, model_nb=1){
-  if ("1" %in% selected_cov){
+  if ("1" %in% selected_cov | length(selected_cov) == 0){
     return(tibble())
   }
   selected_cov[str_detect(selected_cov, pattern = "I")] <- str_replace(selected_cov[str_detect(selected_cov, pattern = "I")], "\\^2", "")

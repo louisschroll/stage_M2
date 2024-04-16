@@ -1,0 +1,127 @@
+#' HEADER ------------------------------------------------------------------------
+#'
+#' Script name:  ~/stage_M2/2.code/pt2_telemetry_and_count/run_Nmixture.R
+#' Author:       Louis Schroll
+#' Email:        louis.schroll@ens-lyon.fr
+#' Date:         2024-04-04
+#'
+#' Script description:
+#'
+#'
+#' -------------------------------------------------------------------------------
+
+
+run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains = 3, comp_pvalues = F){
+  # Nimble code
+  if (comp_pvalues){
+    # Version with bayesian p-values computation
+    int.Nmixture.code <- nimbleCode({
+      # Priors
+      for(i in 1:n.occ.cov){
+        beta[i] ~ dnorm(0,1)
+      }
+      
+      for(i in 1:2){
+        for (nd in 1:ndatasets){
+          alpha[i, nd] ~ dnorm(0,1)
+        }
+      }
+      
+      # Likelihood
+      # State process
+      for(i in 1:nsites_total){
+        log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
+        N[i] ~ dpois(lambda[i])
+      }
+      
+      # Observation process
+      for (i in 1:nsampled_points){
+        logit(p[i]) <- alpha[1, dataset_nb[i]] + alpha[2, dataset_nb[i]] * transect_length[i]
+        nobs[i] ~ dbin(p[i], N[site_id[i]])
+        
+        # Compute discrepancy for real and simulated data
+        ## Expected count at this site and this survey
+        exp_count[i] <- N[site_id[i]] * p[i] 
+        
+        ## Discrepancy for the real data
+        ## (small value added to denominator to avoid potential divide by zero)
+        E[i] <- pow((nobs[i] - exp_count[i]), 2) / (exp_count[i] + 0.005)
+        
+        ## Simulate new count from model
+        nobs.rep[i] ~ dbinom(p[i], N[site_id[i]])
+        
+        ## Discrepancy for the simulated data
+        E.rep[i] <- pow((nobs.rep[i] - exp_count[i]), 2) / (exp_count[i] + 0.005)
+      }
+      
+      # chi-squared test statistics
+      fit <- sum(E[1:nsampled_points])
+      fit.rep <- sum(E.rep[1:nsampled_points])
+    })
+  }
+  else {
+    # Version without p-values computation
+    int.Nmixture.code <- nimbleCode({
+      # Priors
+      for(i in 1:n.occ.cov){
+        beta[i] ~ dnorm(0,1)
+      }
+      
+      for(i in 1:2){
+        for (nd in 1:ndatasets){
+          alpha[i, nd] ~ dnorm(0,1)
+        }
+      }
+      
+      # Likelihood
+      # State process
+      for(i in 1:nsites_total){
+        log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
+        N[i] ~ dpois(lambda[i])
+      }
+      
+      # Observation process
+      for (i in 1:nsampled_points){
+        logit(p[i]) <- alpha[1, dataset_nb[i]] + alpha[2, dataset_nb[i]] * transect_length[i]
+        nobs[i] ~ dbin(p[i], N[site_id[i]])
+      }
+    })
+  }
+  
+  # parameters.to.save <- c("beta", "alpha", "lambda", "p", "N")
+  
+  # In one step
+  # mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
+  #                           data = data_nmix$data,
+  #                           constants = data_nmix$constants,
+  #                           inits = data_nmix$inits,
+  #                           monitors = parameters.to.save,
+  #                           niter = n.iter,
+  #                           nburnin = n.burnin,
+  #                           nchains = n.chains,
+  #                           samplesAsCodaMCMC = TRUE)
+  
+  # In several step
+  int.Nmixture.model <- nimbleModel(code = int.Nmixture.code, 
+                                    constants = data_nmix$constants,
+                                    data = data_nmix$data, 
+                                    inits = data_nmix$inits)
+  
+  int.Nmixture.model$initializeInfo()
+  int.Nmixture.model$calculate()
+  # Configure model
+  confo <- configureMCMC(int.Nmixture.model) #, monitors = parameters.to.save)
+  
+  ## Build and compile MCMC
+  Rmcmco <- buildMCMC(confo)
+  Cmodelo <- compileNimble(int.Nmixture.model)
+  Cmcmco <- compileNimble(Rmcmco, project = Cmodelo)
+  
+  # Run
+  mcmc.output <- runMCMC(Cmcmco, 
+                         niter = n.iter, 
+                         nburnin = n.burnin, 
+                         nchains = n.chains, 
+                         samplesAsCodaMCMC = TRUE)
+  return(mcmc.output)
+}

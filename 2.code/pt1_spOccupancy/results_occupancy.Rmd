@@ -140,7 +140,11 @@ best_covs <- list(
   sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH"),
+  
+  labbe = c("mean_SSH", "sd_SSH", "sd_SAL", "mean_autumn_SST", "mean_winter_SST")
 )
 ```
 
@@ -532,6 +536,75 @@ list_res_plot$predictive_map
 ```{r}
 list_res_plot$table
 MCMCvis::MCMCplot(object = list_res_plot$model_result$beta.samples, object2 = NULL, params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+
+
+# Petits labbes (parasites et pomarins)
+
+Data sources: Migralion
+
+```{r, include = FALSE}
+species <- "labbe"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+
+MCMCvis::MCMCplot(
+      object = list_res_plot$model_result$beta.samples,
+      object2 = NULL,
+      params = "all")
+```
+
+```{r, fig.width=10, fig.height=6}
+coeff_plot <- list_res_plot$coeff_plot
+coeff_plot$alpha_traceplot + coeff_plot$alpha_density + coeff_plot$beta_traceplot + coeff_plot$beta_density
+```
+
+```{r, fig.width=10, fig.height=10}
+PPC_plots <- list_res_plot$PPC_plots
+PPC_plots$pvalue_CS1 + PPC_plots$pvalue_CS2 + PPC_plots$pvalue_FT1 + PPC_plots$pvalue_FT2
+```
+
+
+
+
+# Macareux moine
+
+Data sources: Migralion
+
+```{r, include = FALSE}
+species <- "macareux_moine_HR"
+list_res_plot <- present_results(species)
+```
+
+```{r, fig.width=10, fig.height=6}
+list_res_plot$predictive_map
+```
+
+```{r}
+list_res_plot$table
+
+MCMCvis::MCMCplot(
+      object = list_res_plot$model_result$beta.samples,
+      object2 = NULL,
+      params = "all")
 ```
 
 ```{r, fig.width=10, fig.height=6}

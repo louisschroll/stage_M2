@@ -19,8 +19,8 @@ library(sf)
 library(spOccupancy)
 library(openxlsx)
 
-source("2.code/format_data_for_spOccupancy.R")
-source("2.code/model_selection_functions.R")
+source("2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
+source("2.code/pt1_spOccupancy/model_selection_functions.R")
 
 # load data
 load("1.data/all_seabirds_counts.rdata")
@@ -31,25 +31,25 @@ grid <- covariates_data %>%
   st_transform(st_crs(pelmed_obs))
 
 test_covariates_blocks <- function(data.int, static_covs, sst_covs, dyn_covs, species){
-  df_null_model <- test_all_models("1", data.int)
+  df_null_model <- test_all_models("1", data.int)$comparison_df
   # Static covariates selection
   static_cov_combination <- generateAllCombinations(static_covs)
   static_cov_combination <- static_cov_combination[2:length(static_cov_combination)]
   df_static_cov <- df_null_model %>% 
-    bind_rows(test_all_models(static_cov_combination, data.int))
+    bind_rows(test_all_models(static_cov_combination, data.int)$comparison_df)
 
   # temperature cov selection
   SST_combination <- generateAllCombinations(sst_covs) %>%
     c(list("mean_SST", "sd_SST", c("mean_SST", "sd_SST")))
   SST_combination <- SST_combination[2:length(SST_combination)]
   df_SST_cov <- df_null_model %>% 
-    bind_rows(test_all_models(SST_combination, data.int))
+    bind_rows(test_all_models(SST_combination, data.int)$comparison_df)
 
   # Dynamic cov selection
   dyn_cov_combination <- generateAllCombinations(dyn_covs) 
   dyn_cov_combination <- dyn_cov_combination[2:length(dyn_cov_combination)]
   df_dyn_cov <- df_null_model %>% 
-    bind_rows(test_all_models(dyn_cov_combination, data.int))
+    bind_rows(test_all_models(dyn_cov_combination, data.int)$comparison_df)
   
   # Create a new workbook
   wb <- createWorkbook()
@@ -76,7 +76,7 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
 #   unique() %>%
 #   str_subset("goeland", negate = T)
 
-species_list <- c("puffin_de_scopoli_R",      "sterne_caugek_HR" ,        "mouette_melanocephale_HR", "petit_puffin_HR")
+species_list <- c("labbe", "macareux_moine_HR")
 
 SST_cov_list <- list(
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
@@ -101,7 +101,12 @@ SST_cov_list <- list(
   
   mouette_rieuse_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
   
-  puffin_de_scopoli_R = c("mean_winter_SST", "I(mean_winter_SST)^2", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST")
+  puffin_de_scopoli_R = c("mean_winter_SST", "I(mean_winter_SST)^2", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  labbe = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  macareux_moine_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
+                        "I(mean_spring_SST)^2", "I(mean_summer_SST)^2","I(mean_autumn_SST)^2")
 )
 
 static_cov_list <- list(
@@ -127,7 +132,12 @@ static_cov_list <- list(
   
   mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry"),
   
-  puffin_de_scopoli_R = c("dist_to_shore", "log_bathymetry")
+  puffin_de_scopoli_R = c("dist_to_shore", "log_bathymetry"),
+  
+  labbe = c("dist_to_shore", "bathymetry", "mean_SSH", "sd_SSH"),
+  
+  macareux_moine_HR = c("log_dist_to_shore", "log_bathymetry", "mean_SSH", "sd_SSH",
+                        "I(mean_SSH)^2")
 )
 
 
@@ -154,7 +164,11 @@ dyn_cov_list <- list(
   
   mouette_rieuse_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL")
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  labbe = c("mean_CHL", "sd_SAL", "sd_VEL"),
+  
+  macareux_moine_HR = c("mean_CHL", "sd_SAL", "log_sd_VEL")
 )
 
 

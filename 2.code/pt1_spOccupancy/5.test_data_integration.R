@@ -20,9 +20,9 @@ library(spOccupancy)
 library(openxlsx)
 library(cowplot)
 
-source("2.code/format_data_for_spOccupancy.R")
-source("2.code/model_selection_functions.R")
-source("2.code/prediction_functions.R")
+source("2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
+source("2.code/pt1_spOccupancy/model_selection_functions.R")
+source("2.code/pt1_spOccupancy/prediction_functions.R")
 
 # load data
 load("1.data/all_seabirds_counts.rdata")
@@ -62,7 +62,11 @@ best_covs <- list(
   sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  labbe = c("mean_SSH", "sd_SSH", "sd_SAL", "mean_autumn_SST", "mean_winter_SST"),
+  
+  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH", "mean_autumn_SST", "I(mean_autumn_SST)^2", "mean_CHL")
 )
 
 
@@ -155,6 +159,8 @@ species_list <- migralion_obs %>%
   filter(!is.na(species_name)) %>%
   pull(species_name) %>%
   unique()
+
+species_list <- c("labbe", "macareux_moine_HR")
 
 for (species in species_list){
   print(species)

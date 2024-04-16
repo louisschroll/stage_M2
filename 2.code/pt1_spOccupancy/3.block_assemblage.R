@@ -20,9 +20,9 @@ library(spOccupancy)
 library(openxlsx)
 library(cowplot)
 
-source("2.code/format_data_for_spOccupancy.R")
-source("2.code/model_selection_functions.R")
-source("2.code/prediction_functions.R")
+source("2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
+source("2.code/pt1_spOccupancy/model_selection_functions.R")
+source("2.code/pt1_spOccupancy/prediction_functions.R")
 
 # load data
 load("1.data/all_seabirds_counts.rdata")
@@ -32,28 +32,58 @@ grid <- covariates_data %>%
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs))
 
+# test_blocks_assemblage <- function(data.int, best_static_covs, best_dyn_covs, best_SST_covs, species){
+#   models_to_test <- list(best_static_covs,
+#                          best_dyn_covs,
+#                          best_SST_covs,
+#                          c(best_static_covs, best_dyn_covs),
+#                          c(best_static_covs, best_SST_covs),
+#                          c(best_dyn_covs, best_SST_covs),
+#                          c(best_static_covs, best_dyn_covs, best_SST_covs))
+# 
+#   list_model_test <- test_all_models(models_to_test, data.int)
+#   df_grouping <- list_model_test$comparison_df
+# 
+#   # Save map for each model in one pdf file
+#   predictive_maps_list <- map(list_model_test$model_result_list,
+#                               function(model_result) {
+#                                 selected_cov <- model_result$beta.samples %>% as_tibble() %>% colnames()
+#                                 make_predictive_map(model_result, grid = grid, selected_cov = selected_cov[-1])
+#                               })
+#   names(predictive_maps_list) <- df_grouping$model
+# 
+#   save_maps_as_pdf(maps_list = predictive_maps_list,
+#                    path_to_save = paste0("3.results/model_selection/maps_blocks_assemblage/",
+#                                          species,
+#                                          "_3_blocks_assemblage_maps.pdf"))
+# 
+#   # Create a new workbook
+#   wb <- createWorkbook()
+#   addSelectionSheet(wb, sheet_name = "blocks", df = df_grouping, datasets_nb=length(data.int$y))
+#   # Save the workbook
+#   file_path <- paste0("3.results/model_selection/",
+#                       str_replace(species, " ","_"),
+#                       "_3_blocks_assemblage.xlsx")
+#   saveWorkbook(wb, file_path, overwrite = TRUE)
+#   print(paste("Results in", file_path))
+# }
+
 test_blocks_assemblage <- function(data.int, best_static_covs, best_dyn_covs, best_SST_covs, species){
-  models_to_test <- list(best_static_covs, 
-                         best_dyn_covs,
-                         best_SST_covs,
-                         c(best_static_covs, best_dyn_covs), 
-                         c(best_static_covs, best_SST_covs),
-                         c(best_dyn_covs, best_SST_covs),
-                         c(best_static_covs, best_dyn_covs, best_SST_covs))
-  
+  models_to_test <- generateAllCombinations(c(best_static_covs, best_dyn_covs, best_SST_covs))
+
   list_model_test <- test_all_models(models_to_test, data.int)
   df_grouping <- list_model_test$comparison_df
   
   # Save map for each model in one pdf file
-  predictive_maps_list <- map(list_model_test$model_result_list, 
+  predictive_maps_list <- map(list_model_test$model_result_list,
                               function(model_result) {
                                 selected_cov <- model_result$beta.samples %>% as_tibble() %>% colnames()
                                 make_predictive_map(model_result, grid = grid, selected_cov = selected_cov[-1])
                               })
   names(predictive_maps_list) <- df_grouping$model
   
-  save_maps_as_pdf(maps_list = predictive_maps_list, 
-                   path_to_save = paste0("3.results/model_selection/maps_blocks_assemblage/", 
+  save_maps_as_pdf(maps_list = predictive_maps_list,
+                   path_to_save = paste0("3.results/model_selection/maps_blocks_assemblage/",
                                          species,
                                          "_3_blocks_assemblage_maps.pdf"))
   
@@ -61,8 +91,8 @@ test_blocks_assemblage <- function(data.int, best_static_covs, best_dyn_covs, be
   wb <- createWorkbook()
   addSelectionSheet(wb, sheet_name = "blocks", df = df_grouping, datasets_nb=length(data.int$y))
   # Save the workbook
-  file_path <- paste0("3.results/model_selection/", 
-                      str_replace(species, " ","_"), 
+  file_path <- paste0("3.results/model_selection/",
+                      str_replace(species, " ","_"),
                       "_3_blocks_assemblage.xlsx")
   saveWorkbook(wb, file_path, overwrite = TRUE)
   print(paste("Results in", file_path))
@@ -79,7 +109,7 @@ species_list <- migralion_obs %>%
   unique()
 #   str_subset("sterne", negate = T) %>% 
 #   str_subset("goeland", negate = T)
-
+species_list <- c("macareux_moine_HR")
 
 best_static_covs <- list(
   fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
@@ -104,7 +134,11 @@ best_static_covs <- list(
   sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry"),
   sterne_caugek_R = c("log_bathymetry"),
   
-  sterne_pierregarin_R = c("log_bathymetry")
+  sterne_pierregarin_R = c("log_bathymetry"),
+  
+  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH"),
+  
+  labbe = c("mean_SSH", "sd_SSH")
   )
 
 best_SST_covs <- list(
@@ -130,7 +164,11 @@ best_SST_covs <- list(
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   sterne_caugek_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
-  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"), 
+  
+  macareux_moine_HR = c("mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  labbe = c("mean_autumn_SST", "mean_winter_SST")
   )
 
 best_dyn_covs <- list(
@@ -158,7 +196,11 @@ best_dyn_covs <- list(
   
   sterne_pierregarin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  sterne_pierregarin_R = c("mean_CHL", "mean_SSH", "log_sd_VEL")
+  sterne_pierregarin_R = c("mean_CHL", "mean_SSH", "log_sd_VEL"),
+  
+  macareux_moine_HR = c("mean_CHL"),
+  
+  labbe = c("sd_SAL")
   )
 
 for (species in species_list){

@@ -20,9 +20,9 @@ library(spOccupancy)
 library(openxlsx)
 
 # cluster adress
-adress <- "/lustre/schrolll/"
+# adress <- "/lustre/schrolll/"
 # Local adress
-# adress <- ""
+adress <- ""
 
 # Load functions
 source(paste0(adress, "2.code/pt1_spOccupancy/format_data_for_spOccupancy.R"))

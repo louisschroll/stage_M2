@@ -39,16 +39,17 @@ data_list = list(
   migralion = list(obs = migralion_obs, eff = migralion_eff)
   )
 
-species <- "macareux_moine_HR"
+species <- "oceanite_tempete"
 
 data.int <- get_data_for_spOccupancy(data_list, grid, species)
 
-selected_cov <- c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST")
-aa <- run_and_predict(data.int = data.int, grid=grid, species=species, selected_cov=selected_cov)
+selected_cov <- c("dist_to_shore", "log_bathymetry", "sd_SSH", "log_sd_VEL")
+aa <- run_model_without_kfold(data.int = data.int, grid=grid, species=species, selected_cov=selected_cov)
+mappp <- make_predictive_map(aa, grid, selected_cov)
+mappp$psi 
 
-aa$psi 
-
-
+fff <- make_coeff_plot(aa)
+fff$beta_traceplot
 grid_caugek <- put_results_in_grid(grid, model_result = aa$res, selected_cov) %>% 
   select(mean.intensity, sd.intensity)
 plot(grid_caugek)
