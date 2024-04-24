@@ -1,0 +1,27 @@
+---
+title: "Combining maps"
+author: "Louis Schroll"
+date: "2024-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, message = F, warning = F)
+```
+
+```{r}
+library(readxl)
+indice_sensibilite_responsabilité <- read_excel("6.source/indice_sensibilite_responsabilité.xlsx", skip = 1)
+indice_sensibilite_responsabilité
+```
+
+
+# Vulnerabiliy
+
+$$
+Species \ vulnerability \ score = \frac{Alt + Man + T + Noc}{4} \times \frac{Dis + Spe}{2} \times CS
+$$
+
+# Collision
+
+# Disturbance and displacements
