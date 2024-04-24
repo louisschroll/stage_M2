@@ -1,0 +1,493 @@
+---
+title: "Seabirds occupancy and abundance in the Gulf of lion"
+author: "Louis Schroll"
+date: "2024-04-22"
+output: 
+  html_document:
+    toc: TRUE
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r loading}
+# load package
+library(tidyverse, warn.conflicts = FALSE)
+library(sf)
+library(patchwork)
+# library(extrafont)
+
+local_path <- "~/stage_M2/"
+
+# load data
+load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
+load(paste0(local_path, "1.data/grid_cells.rdata"))
+load(paste0(local_path, "1.data/RSF_data_scopoli_shearwaters.rdata"))
+load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+
+# load functions
+path_to_Rfunc <- paste0(local_path, "2.code/pt2_telemetry_and_count/R_func")
+sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
+
+
+
+best_covs <- list(
+  fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
+  
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", 
+                           "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("log_dist_to_shore", "mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
+  
+  mouette_melanocephale_HR = c("mean_CHL", "sd_SAL", "mean_winter_SST", "mean_autumn_SST"),
+  mouette_melanocephale_R = c("mean_autumn_SST"),
+  
+  mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_CHL", "sd_SAL", 
+                        "mean_SSH", "log_sd_VEL", "mean_autumn_SST", 
+                        "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST"),
+  
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL"),
+  
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry", 'mean_CHL', "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "mean_SSH"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
+  
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  
+  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  
+  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH"),
+  
+  labbe = c("mean_SSH", "sd_SSH", "sd_SAL", "mean_autumn_SST", "mean_winter_SST")
+)
+
+obs_data <- bind_rows(migralion_obs %>% mutate(data_source = "migralion"),
+                     pelmed_obs %>% mutate(data_source = "PELMED") %>% st_crop(st_bbox(grid)),
+                     pnm_obs %>% mutate(data_source = "PNM"),
+                     samm_obs %>% mutate(data_source = "SAMM") %>% st_crop(st_bbox(grid)))
+
+change_covariate_names <- function(coeff_df){
+  coeff_df %>% 
+    mutate(covariates = case_when(covariates == "dist_to_shore" ~ "Distance to coast",
+                                  covariates == "log_bathymetry" ~ "Bathymetry (log)",
+                                  covariates == "bathymetry" ~ "Bathymetry",
+                                  covariates == "mean_ssh" ~ "Sea surface height",
+                                  covariates == "sd_ssh" ~ "SSH variability (sd)",
+                                  covariates == "sd_sal" ~ "Salinity variablity (sd)",
+                                  covariates == "mean_autumn_sst" ~ "Autumn SST",
+                                  covariates == "mean_winter_sst" ~ "Winter SST",
+                                  covariates == "mean_summer_sst" ~ "Summer SST",
+                                  covariates == "mean_spring_sst" ~ "Spring SST",
+                                  covariates == "log_sd_vel" ~ "Current velocity variability (log)",
+                                  covariates == "mean_chl" ~ "Chlorophyl A",
+                                  covariates == "mean_summer_sst" ~ "Summer SST",
+                                  covariates == "mean_winter_sst" ~ "Winter SST"))
+}
+
+
+plot_results_occ_and_nmix <- function(species){
+  # Compare coefficients for occupancy and N-mix
+  load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species, ".RData"))
+  samples_spOcc <- model_result$beta.samples
+  selected_cov <- best_covs[[species]]
+  coeff_df <- gather_coeff_values(sampleNmixture = sampleNmixture, samples_spOcc = samples_spOcc, selected_cov = selected_cov)
+  coeff_df <- change_covariate_names(coeff_df)
+  coeff_plot <- plot_coeff_by_model2(coeff_df)
+  
+  # Look at the maps
+  grid_occupancy <- spOccupancy_res_grid %>% select(all_of(c("grid_c", paste0("mean_psi_", species), paste0("sd_psi_", species))))
+  names(grid_occupancy) <- c("mean_psi", "sd_psi", "grid_c")
+  occupancy_plot <- plot_occupancy(grid_occupancy = grid_occupancy, plot_title = "spOccupancy")
+  
+  grid_nmix <- make_prediction(samplesNmixture, grid = grid, selected_cov = selected_cov)
+  plots_nmix <- plot_prediction(grid_nmix, plot_title = "N-mixture")
+  
+  plot_data_occ <- ggplot() +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = grid, aes(fill = bathymetry), color = NA) +
+    geom_sf(data = obs_data %>% filter(species_name == species),
+            aes(color = data_source), size = 0.8) +
+    scale_color_manual(values = c("red", "blue1", "purple", "coral4")) +
+    labs(title = "Presence/absence data") +
+    theme_bw() +
+    theme(
+      legend.position = "bottom", legend.box = "vertical",
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = 10),
+      plot.title.position = 'plot',
+      axis.text = element_text(size = 6)) +
+    guides(fill = FALSE) 
+    
+  
+  plot_data_nmix <- ggplot() +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = grid, aes(fill = bathymetry), color = NA) +
+    geom_sf(data = obs_data %>% filter(species_name == species),
+            aes(color = data_source, size = effectif)) +
+    scale_color_manual(values = c("red", "blue1", "purple", "coral4")) +
+    labs(title = "Count data") +
+    theme_bw() +
+    theme(
+      legend.position = "bottom", legend.box = "vertical",
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = 10),
+      plot.title.position = 'plot',
+      axis.text = element_text(size = 6)) +
+    guides(fill = FALSE, size = FALSE) 
+  
+  final_plot <- (((occupancy_plot$mean_psi_plot + occupancy_plot$sd_psi_plot) / 
+                    (plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot) /
+                    (plot_data_occ + plot_data_nmix)) | coeff_plot) + 
+    plot_layout(widths = c(3, 1)) +
+    plot_annotation(title = paste0(str_replace_all(string = species, 
+                                                   pattern = "_", 
+                                                   replacement = " "), 
+                                   " space-use"),
+                    subtitle = "Comparison between occupancy and N-mixture") &
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5))
+  
+  return(final_plot)
+}
+```
+
+
+```{r}
+species <- "fou_de_bassan_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- NULL
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Goéland leucophée / Yellow-legged gull
+
+## Hors repro
+
+```{r}
+species <- "goeland_leucophee_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+## Repro
+
+```{r}
+species <- "goeland_leucophee_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Mouette melanocephale
+
+## Hors repro
+
+```{r}
+species <- "mouette_melanocephale_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+
+## Repro
+
+```{r}
+species <- "mouette_melanocephale_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+
+# Mouette pygmée / Little gull
+
+```{r}
+species <- "mouette_pygmee_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Mouette rieuse / Black-headed gull
+
+```{r}
+species <- "mouette_rieuse_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Océanite tempête / Storm petrel
+
+```{r}
+species <- "oceanite_tempete"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Petits puffins / Small shearwaters
+
+## Hors repro
+
+```{r}
+species <- "petit_puffin_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+## Repro
+
+```{r}
+species <- "petit_puffin_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Pufin de Scopoli / Scopoli's shearwaters
+
+```{r}
+species <- "puffin_de_scopoli_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Sternes caugeks / Sandwich terns
+
+## Hors repro
+
+```{r}
+species <- "sterne_caugek_HR"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+## Repro
+
+```{r}
+species <- "sterne_caugek_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Sterne pierregarin / Common tern 
+
+```{r}
+species <- "sterne_pierregarin_R"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
+# Labbe
+
+```{r}
+species <- "labbe"
+load(paste0(local_path, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
+
+# check convergence
+mcmcplots::traplot(samplesNmixture, parms = c("alpha", "beta"))
+mcmcplots::denplot(samplesNmixture, parms = c("alpha", "beta"))
+
+MCMCvis::MCMCsummary(object = samplesNmixture, round = 2, params = c("alpha", "beta")) %>% knitr::kable()
+
+datasets_names <- c("Migralion", "Pelmed", "PNM", "SAMM")
+plot_PPC_Nmixture(samplesNmixture = samplesNmixture, 
+                  datasets_names = datasets_names)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+plot_results_occ_and_nmix(species)
+```
+
