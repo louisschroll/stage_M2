@@ -4,3 +4,6 @@
 .Ruserdata
 
 0.raw_data/
+
+3.results/spOccupancy_outputs/
+3.results/mcmc_outputs/
