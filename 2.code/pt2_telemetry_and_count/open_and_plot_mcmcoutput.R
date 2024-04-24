@@ -57,21 +57,21 @@ best_cov <- list(
   )
 )
 
-selected_cov <- best_cov[["sterne_caugek_R"]]
+selected_cov <- best_cov[["puffin_de_scopoli_R"]]
 # check convergence
 mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(object = samplesRSF, round = 2)
 
-new_grid_RSF <-
-  make_prediction(
-    samplesRSF,
-    grid,
-    selected_cov,
-    include_intercept = F,
-    rsf_intercept = "beta_pop[1]"
-  )
+
+new_grid_RSF <- make_prediction(
+  samplesRSF,
+  grid,
+  selected_cov,
+  include_intercept = F,
+  rsf_intercept = "beta_pop[1]"
+)
 
 plots_rsf <- plot_prediction(new_grid_RSF, add_colonies = F)
 #plots$mean_psi_plot + geom_point(data=df_RSF %>% filter(case==1), aes(x=X, y=Y))
@@ -94,6 +94,15 @@ MCMCvis::MCMCsummary(object = samplesint, round = 2)
 
 plots_int$mean_psi_plot + plots_int$sd_psi_plot
 
+# Plot all the maps
+load("3.results/spOccupancy_outputs/spOccupancy_puffin_de_scopoli_R.RData")
+samples_spOcc <- model_result$beta.samples
+# 0/3 spOccupancy 
+load("3.results/grid_spOccupancy_results.RData")
+plot(spOccupancy_res_grid)
+grid_scopoli <- spOccupancy_res_grid
+names(grid_scopoli) <- c("grid_c", "mean_psi", "sd_psi")
+plots_spOccupancy <- plot_occupancy(grid_scopoli, plot_title = "Occupancy")
 # 1/3 - N-mixture
 new_grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov)
 plots_nmix <- plot_prediction(new_grid_nmix, plot_title = "N-mixture")
@@ -117,7 +126,9 @@ plots_int <- plot_prediction(new_grid_int,
                              add_colonies = F, 
                              plot_title = "Integrated model")
 
-(plots_rsf_mean + plots_rsf$sd_psi_plot) /
+
+(plots_spOccupancy$mean_psi_plot + plots_spOccupancy$sd_psi_plot) /
+  ((plots_rsf_mean + plots_rsf$sd_psi_plot) /
   (plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot) /
   (plots_int$mean_psi_plot + plots_int$sd_psi_plot) +
   plot_layout(guides = "collect") +
@@ -128,7 +139,13 @@ plots_int <- plot_prediction(new_grid_int,
       plot.title = element_text(size = 20,
                                 face = "bold",
                                 hjust = 0.5),
-      legend.position = "top"
+      legend.position = "bottom"
     )
-  )
+  )) +
+  plot_layout(heights = c(1, 4))
+
+
+
+
+
 
