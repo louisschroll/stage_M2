@@ -30,7 +30,7 @@ grid <- covariates_data %>%
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs))
 
-results_grid <- grid %>% select(grid_c)
+spOccupancy_res_grid <- grid %>% select(grid_c)
 
 data_list = list(
   pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
@@ -90,17 +90,24 @@ for (i in 1:n_iter){
   print(species)
   selected_cov <- best_covs[[species]]
   data.int <- get_data_for_spOccupancy(data_list, grid, species)
-  model_result <- run_model_without_kfold(data.int = data.int, grid=grid, species=species, selected_cov=selected_cov)
+  model_result <- run_model_without_kfold(data.int = data.int, 
+                                          grid=grid, 
+                                          species=species, 
+                                          selected_cov=selected_cov,
+                                          n.samples = 100000)
+  save(model_result, file = paste0("3.results/spOccupancy_outputs/spOccupancy_",species,".RData"))
+  
   grid2 <- put_results_in_grid(grid, model_result = model_result, selected_cov) %>% 
     select(mean.psi, sd.psi)
   
-  results_grid[[paste0("mean_psi_", species)]] <- grid2$mean.psi
-  results_grid[[paste0("sd_psi_", species)]] <- grid2$sd.psi
+  spOccupancy_res_grid[[paste0("mean_psi_", species)]] <- grid2$mean.psi
+  spOccupancy_res_grid[[paste0("sd_psi_", species)]] <- grid2$sd.psi
   
   setTxtProgressBar(pb, i)
 }
 close(pb)
 
-plot(results_grid)
+plot(spOccupancy_res_grid)
 
-st_write(results_grid, dsn = "3.results/grid_spOccupancy_results.shp")
+save(spOccupancy_res_grid, file = "3.results/grid_spOccupancy_results.RData")
+#st_write(spOccupancy_res_grid, dsn = "3.results/grid_spOccupancy_results.shp")

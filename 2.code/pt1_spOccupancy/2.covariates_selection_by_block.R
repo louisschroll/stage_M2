@@ -70,13 +70,12 @@ data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  pnm = list(obs = pnm_obs, eff = pnm_eff),
                  migralion = list(obs = migralion_obs, eff = migralion_eff))
 
-# species_list <- migralion_obs %>%
-#   filter(!is.na(species_name)) %>%
-#   pull(species_name) %>%
-#   unique() %>%
-#   str_subset("goeland", negate = T)
+species_list <- migralion_obs %>%
+  filter(!is.na(species_name)) %>%
+  pull(species_name) %>%
+  unique() %>%
+  str_subset("goeland", negate = T)
 
-species_list <- c("labbe", "macareux_moine_HR")
 
 SST_cov_list <- list(
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),

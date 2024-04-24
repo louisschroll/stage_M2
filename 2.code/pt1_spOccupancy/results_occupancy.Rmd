@@ -19,7 +19,6 @@ library(spOccupancy)
 library(openxlsx)
 library(cowplot)
 library(patchwork)
-library(shiny)
 
 # load data
 load("~/stage_M2/1.data/all_seabirds_counts.rdata")
