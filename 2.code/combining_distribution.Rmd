@@ -61,18 +61,38 @@ $$
 ## Summer
 
 ```{r}
-score_df <- score_df %>% select(nom_fr, vul_furn_summer)
 
-mean_psi_df <- spOccupancy_res_grid %>% select(starts_with("mean_psi")) %>% 
-  select(ends_with("_R")) %>% 
-  mutate(row_id = 1:nrow(.)) %>% 
-  pivot_longer(-row_id, values_to = "mean_psi", names_to = "species_name") %>% 
-  mutate(species_name = str_extract(string = species_name, pattern = "(?<=mean_psi_)(.*?)(?=_R)")) 
+compute_vulnerability_gridcell <- function(results_grid, score_df, seasons = "summer", score_colname = "vul_furn_summer"){
+  mean_psi_df <- results_grid %>% select(starts_with("mean_psi")) %>% 
+    select(ends_with("_R")) %>% 
+    mutate(row_id = 1:nrow(.)) %>% 
+    pivot_longer(-row_id, values_to = "mean_psi", names_to = "species_name") %>% 
+    mutate(species_name = str_extract(string = species_name, pattern = "(?<=mean_psi_)(.*?)(?=_R)")) 
   
-nb_of_cells <- max(mean_psi_df$row_id)
-species_list <- unique(mean_psi_df$species_name)
+  species_list <- unique(mean_psi_df$species_name)
+  
+  filtered_score <- score_df %>% filter(nom_fr %in% species_list)
+  species_order <- filtered_score %>% pull(nom_fr)
+  score_matrix <- filtered_score %>% pull(score_colname)
+  
+  mean_psi_matrix <- mean_psi_df %>% 
+    pivot_wider(names_from = species_name, values_from = mean_psi) %>% 
+    select(-row_id) %>% 
+    relocate(all_of(species_order)) %>% 
+    as.matrix()
 
-score_df %>% filter(nom_fr %in% species_list)
+  aggregated_value <- mean_psi_matrix %*% score_matrix
+  
+  results_grid$multispecies_score <- aggregated_value
+  names(spOccupancy_res_grid)[ncol(spOccupancy_res_grid)] <- score_colname
+  return(results_grid)
+}
+
+
+
+ggplot(data = spOccupancy_res_grid, aes(fill = aggregated_value)) +
+  geom_sf(color = NA) +
+  scale_fill_distiller(palette = "Spectral")
 ```
 
 
