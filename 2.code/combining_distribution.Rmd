@@ -10,18 +10,87 @@ knitr::opts_chunk$set(echo = F, message = F, warning = F)
 ```
 
 ```{r}
+local_path <- "~/stage_M2/"
 library(readxl)
-indice_sensibilite_responsabilité <- read_excel("6.source/indice_sensibilite_responsabilité.xlsx", skip = 1)
-indice_sensibilite_responsabilité
+library(tidyverse)
+
+load(file = paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+
+indice_sensibilite_responsabilité <- read_excel(paste0(local_path,"6.source/indice_sensibilite_responsabilité.xlsx"), skip = 1)
+score_df <- indice_sensibilite_responsabilité %>% 
+  mutate(
+    collision_score = Alt * (Man + Ptf + Noc) / 3,
+    collision_summer = collision_score * CS_summer,
+    collision_winter = collision_score * CS_winter,
+    collision_summer_10    = round(collision_summer    / max(collision_summer, na.rm = T)    *10, 2),
+    collision_winter_10    = round(collision_winter    / max(collision_winter, na.rm = T)    *10, 2)) %>% 
+  mutate(
+    displacement_score = (Dis * Spe),
+    displacement_summer = displacement_score * CS_summer,
+    displacement_winter = displacement_score * CS_winter,
+    displacement_summer_10 = round(displacement_summer / max(displacement_summer, na.rm = T) *10, 2),
+    displacement_winter_10 = round(displacement_winter / max(displacement_winter, na.rm = T) *10, 2)
+  ) %>% 
+  mutate(
+    vul_furn = (Alt + Man + Ptf + Noc) * (Dis + Spe) / 8,
+    vul_mean_summer = rowMeans(select(., displacement_summer_10, collision_summer_10)),
+    vul_mean_winter = rowMeans(select(., displacement_winter_10, collision_winter_10)),
+    vul_maxi_summer = pmax(collision_summer_10, displacement_summer_10),
+    vul_maxi_winter = pmax(collision_winter_10, displacement_winter_10),
+    vul_furn_summer = vul_furn * CS_summer,
+    vul_furn_winter = vul_furn * CS_winter,
+    vul_furn_summer = vul_furn_summer / max(vul_furn_summer, na.rm = T) * 10,
+    vul_furn_winter = vul_furn_winter / max(vul_furn_winter, na.rm = T) * 10
+  ) %>% 
+  select(nom_fr, 
+         collision_summer_10, collision_winter_10, 
+         displacement_summer_10, displacement_winter_10,
+         vul_mean_summer, vul_mean_winter,
+         vul_maxi_summer, vul_maxi_winter,
+         vul_furn_summer, vul_furn_winter) 
+
+
 ```
 
 
 # Vulnerabiliy
 
 $$
-Species \ vulnerability \ score = \frac{Alt + Man + T + Noc}{4} \times \frac{Dis + Spe}{2} \times CS
+Species \ vulnerability \ score = \frac{Alt + Man + TF + Noc}{4} \times \frac{Dis + Spe}{2} \times CS
 $$
+## Summer
+
+```{r}
+score_df <- score_df %>% select(nom_fr, vul_furn_summer)
+
+mean_psi_df <- spOccupancy_res_grid %>% select(starts_with("mean_psi")) %>% 
+  select(ends_with("_R")) %>% 
+  mutate(row_id = 1:nrow(.)) %>% 
+  pivot_longer(-row_id, values_to = "mean_psi", names_to = "species_name") %>% 
+  mutate(species_name = str_extract(string = species_name, pattern = "(?<=mean_psi_)(.*?)(?=_R)")) 
+  
+nb_of_cells <- max(mean_psi_df$row_id)
+species_list <- unique(mean_psi_df$species_name)
+
+score_df %>% filter(nom_fr %in% species_list)
+```
+
+
+
 
 # Collision
 
+$$
+Collision \ risk \ score = \frac{Alt \times (Man + TF + Noc)}{3} \times CS
+$$
+
 # Disturbance and displacements
+
+$$
+Displacement \ score = \frac{(Dis + Spe) \times CS}{10}
+$$
+
+
+
+
+
