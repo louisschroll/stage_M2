@@ -281,15 +281,15 @@ count_by_session(pnm_obs, species) %>% kable(format = "markdown", caption = "Meg
 
 pnm_obs <- pnm_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete", 
                                                     #& session %in% c("2019automne", "2020automne"), 
-                                                    "oceanite_tempete", species_name))
+                                                    "oceanite_tempete_R", species_name))
 
 pelmed_obs <- pelmed_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete" 
                                                     & session != "2020", 
-                                                    "oceanite_tempete", species_name))
+                                                    "oceanite_tempete_R", species_name))
 
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr=="oceanite tempete"
                                                     & session %in% c("prenup2022", "prenup2023"), 
-                                                    "oceanite_tempete", species_name))
+                                                    "oceanite_tempete_R", species_name))
 ```
 
 
@@ -478,7 +478,7 @@ count_by_session(pnm_obs, species) #%>% kable(format = "markdown", caption = "Me
 ```{r}
 migralion_obs <- migralion_obs %>% mutate(species_name = ifelse(nom_fr %in% c("labbe pomarin", "labbe parasite")
                                                     & session %in% c("prenup2022", "prenup2023"), 
-                                                    "labbe", species_name))
+                                                    "labbe_R", species_name))
 ```
 
 

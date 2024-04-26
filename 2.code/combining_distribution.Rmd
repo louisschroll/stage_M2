@@ -13,8 +13,11 @@ knitr::opts_chunk$set(echo = F, message = F, warning = F)
 local_path <- "~/stage_M2/"
 library(readxl)
 library(tidyverse)
+library(patchwork)
+library(sf)
 
 load(file = paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
 
 indice_sensibilite_responsabilité <- read_excel(paste0(local_path,"6.source/indice_sensibilite_responsabilité.xlsx"), skip = 1)
 score_df <- indice_sensibilite_responsabilité %>% 
@@ -50,24 +53,27 @@ score_df <- indice_sensibilite_responsabilité %>%
          vul_furn_summer, vul_furn_winter) 
 
 
-```
-
-
-# Vulnerabiliy
-
-$$
-Species \ vulnerability \ score = \frac{Alt + Man + TF + Noc}{4} \times \frac{Dis + Spe}{2} \times CS
-$$
-## Summer
-
-```{r}
+spOccupancy_res_grid <- spOccupancy_res_grid %>% 
+  rename(mean_psi_labbe_HR = mean_psi_labbe,
+         sd_psi_labbe_HR = sd_psi_labbe,
+         mean_psi_oceanite_tempete_R = mean_psi_oceanite_tempete,
+         sd_psi_oceanite_tempete_R = sd_psi_oceanite_tempete)
 
 compute_vulnerability_gridcell <- function(results_grid, score_df, seasons = "summer", score_colname = "vul_furn_summer"){
-  mean_psi_df <- results_grid %>% select(starts_with("mean_psi")) %>% 
-    select(ends_with("_R")) %>% 
+  if (seasons == "summer"){
+    species_names_end = "_R"
+    extract_pattern = "(?<=mean_psi_)(.*?)(?=_R)"
+  } else if (seasons == "winter"){
+    species_names_end = "_HR"
+    extract_pattern = "(?<=mean_psi_)(.*?)(?=_HR)"
+  }
+  mean_psi_df <- results_grid %>% 
+    as_tibble() %>% 
+    select(starts_with("mean_psi")) %>% 
+    select(ends_with(species_names_end)) %>% 
     mutate(row_id = 1:nrow(.)) %>% 
     pivot_longer(-row_id, values_to = "mean_psi", names_to = "species_name") %>% 
-    mutate(species_name = str_extract(string = species_name, pattern = "(?<=mean_psi_)(.*?)(?=_R)")) 
+    mutate(species_name = str_extract(string = species_name, pattern = extract_pattern)) 
   
   species_list <- unique(mean_psi_df$species_name)
   
@@ -82,17 +88,175 @@ compute_vulnerability_gridcell <- function(results_grid, score_df, seasons = "su
     as.matrix()
 
   aggregated_value <- mean_psi_matrix %*% score_matrix
-  
-  results_grid$multispecies_score <- aggregated_value
-  names(spOccupancy_res_grid)[ncol(spOccupancy_res_grid)] <- score_colname
-  return(results_grid)
+
+  return(aggregated_value)
 }
 
+plot_vulnerability_map <- function(grid_synthesis, 
+                               fill_with,
+                               legend_position = "bottom",
+                               plot_title = "",
+                               plot_title_size = 8,
+                               legend_title_size = 9,
+                               axis_text_size = 6,
+                               plot_font = "Arial"){
+  ggplot() +
+    geom_sf(data = grid_synthesis, aes(fill = .data[[fill_with]]), color = NA, lwd = 0) +
+    scale_fill_distiller(palette = "Spectral", 
+                         breaks = c(min(grid_synthesis[[fill_with]]), max(grid_synthesis[[fill_with]])),
+                         labels = c("Low", "High")) +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    #geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      #text = element_text(family = plot_font),
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = plot_title_size),
+      plot.title.position = 'plot',
+      axis.text = element_text(size = axis_text_size)
+      ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Seabirds vulnerability",
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size,
+         # family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        ticks = FALSE,
+        title.hjust = .5,
+        barwidth = unit(6, 'lines'),
+        barheight = unit(.4, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none")
+}
+```
 
 
-ggplot(data = spOccupancy_res_grid, aes(fill = aggregated_value)) +
-  geom_sf(color = NA) +
-  scale_fill_distiller(palette = "Spectral")
+# Vulnerabiliy
+
+$$
+Species \ vulnerability \ score = \frac{Alt + Man + TF + Noc}{4} \times \frac{Dis + Spe}{2} \times CS
+$$
+
+```{r, fig.height=10, fig.width=8}
+
+
+
+grid_synthesis <- spOccupancy_res_grid %>%
+  mutate(
+    vulnerability_furness_summer = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "summer",
+      score_colname = "vul_furn_summer"
+    ),
+    vulnerability_mean_summer = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "summer",
+      score_colname = "vul_mean_summer"
+    ),
+    vulnerability_max_summer = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "summer",
+      score_colname = "collision_summer_10"
+    ),
+    vulnerability_furness_winter = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "winter",
+      score_colname = "vul_furn_winter"
+    ),
+    vulnerability_mean_winter = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "winter",
+      score_colname = "vul_mean_winter"
+    ),
+    vulnerability_max_winter = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "winter",
+      score_colname = "vul_maxi_winter"
+    )
+  )
+
+
+grid_synthesis <- grid_synthesis %>% 
+  mutate(
+    vulnerability_furness_all = rowMeans(select(as_tibble(.), 
+                                                 vulnerability_furness_summer, 
+                                                 vulnerability_furness_winter)),
+    vulnerability_mean_all = rowMeans(select(as_tibble(.), 
+                                                 vulnerability_mean_summer, 
+                                                 vulnerability_mean_winter)),
+    vulnerability_max_all = rowMeans(select(as_tibble(.), 
+                                                 vulnerability_max_summer, 
+                                                 vulnerability_max_winter)))
+
+
+
+plot_furness_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "vulnerability_furness_summer",
+                                   plot_title = "Furness formula")
+
+plot_mean_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                fill_with = "vulnerability_mean_summer",
+                                plot_title = "Mean")
+
+plot_max_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                               fill_with = "vulnerability_max_summer",
+                               plot_title = "Max")
+
+plot_furness_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "vulnerability_furness_winter",
+                                   plot_title = "Furness formula")
+
+plot_mean_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                fill_with = "vulnerability_mean_winter",
+                                plot_title = "Mean")
+
+plot_max_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                               fill_with = "vulnerability_max_winter",
+                               plot_title = "Max")
+
+plot_furness_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "vulnerability_furness_all",
+                                   plot_title = "Furness formula")
+
+plot_mean_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                fill_with = "vulnerability_mean_all",
+                                plot_title = "Mean")
+
+plot_max_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                               fill_with = "vulnerability_max_all",
+                               plot_title = "Max")
+
+(plot_furness_summer | plot_mean_summer | plot_max_summer) /
+  (plot_furness_winter | plot_mean_winter | plot_max_winter)  + 
+  (plot_furness_all | plot_mean_all | plot_max_all) + 
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Seabirds vulnerability to wind farms",
+    subtitle = "Line 1: Summer, line 2: winter, line 3: Mean(summer, winter)",
+    #caption = 'Source: Migralion project & PELMED 2017-2021',
+    theme = theme(
+      plot.title = element_text(size = 12,
+                                face = "bold",
+                                hjust = 0.5),
+      legend.position = "bottom", 
+    ))
+
+
+
+
 ```
 
 
@@ -103,6 +267,90 @@ ggplot(data = spOccupancy_res_grid, aes(fill = aggregated_value)) +
 $$
 Collision \ risk \ score = \frac{Alt \times (Man + TF + Noc)}{3} \times CS
 $$
+
+```{r, fig.height=10, fig.width=8}
+
+grid_synthesis <- grid_synthesis %>%
+  mutate(
+    collision_summer = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "summer",
+      score_colname = "collision_summer_10"
+    ),
+    collision_winter = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "winter",
+      score_colname = "collision_winter_10"
+    ),
+    displacement_summer = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "summer",
+      score_colname = "displacement_summer_10"
+    ),
+    displacement_winter = compute_vulnerability_gridcell(
+      results_grid = spOccupancy_res_grid,
+      score_df = score_df,
+      seasons = "winter",
+      score_colname = "displacement_winter_10"
+    )) %>% 
+  mutate(
+    collision_all = rowMeans(select(as_tibble(.), 
+                                    collision_summer, 
+                                    collision_winter)),
+    displacement_all = rowMeans(select(as_tibble(.), 
+                                       displacement_summer, 
+                                       displacement_winter))
+  )
+
+
+
+plot_collision_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "collision_summer",
+                                   plot_title = "Collision risk summer")
+
+plot_collision_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "collision_winter",
+                                   plot_title = "Collision risk winter")
+
+plot_collision_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "collision_all",
+                                   plot_title = "Collision risk average")
+
+plot_displacement_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "displacement_summer",
+                                   plot_title = "Displacement risk summer")
+
+plot_displacement_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "displacement_winter",
+                                   plot_title = "Displacement risk winter")
+
+plot_displacement_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+                                   fill_with = "displacement_all",
+                                   plot_title = "Displacement risk average")
+
+
+
+(plot_collision_summer | plot_collision_winter | plot_collision_all) /
+  (plot_displacement_summer | plot_displacement_winter | plot_displacement_all)  + 
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Seabirds vulnerability to wind farms",
+    #caption = 'Source: Migralion project & PELMED 2017-2021',
+    theme = theme(
+      plot.title = element_text(size = 12,
+                                face = "bold",
+                                hjust = 0.5),
+      legend.position = "bottom", 
+    ))
+
+
+
+
+```
+
 
 # Disturbance and displacements
 
