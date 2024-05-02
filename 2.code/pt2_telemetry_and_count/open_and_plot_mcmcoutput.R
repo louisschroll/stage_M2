@@ -57,7 +57,7 @@ best_cov <- list(
   )
 )
 
-selected_cov <- best_cov[["puffin_de_scopoli_R"]]
+selected_cov <- best_cov[["goeland_leucophee_HR"]]
 # check convergence
 mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
