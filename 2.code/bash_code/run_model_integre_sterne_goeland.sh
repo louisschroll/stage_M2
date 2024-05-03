@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --job-name=sterne_goeland_model
+#SBATCH --job-name=sterne_model
 #SBATCH -N 1
 #SBATCH -n 3
 #SBATCH --mem-per-cpu=5G
@@ -10,8 +10,8 @@
 #SBATCH --mail-type=ALL
 
 ### Output & Error
-#SBATCH --output=/lustre/schrolll/3.results/sterne_goel_model.out
-#SBATCH --error=/lustre/schrolll/3.results/sterne_goel_model.err              
+#SBATCH --output=/lustre/schrolll/3.results/sterne_model.out
+#SBATCH --error=/lustre/schrolll/3.results/sterne_model.err              
 
 
 echo « Running on: $SLURM_NODELIST »

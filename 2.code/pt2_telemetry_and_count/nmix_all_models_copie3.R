@@ -68,11 +68,11 @@ best_covs <- list(
   
   labbe = c("mean_SSH", "sd_SSH", "sd_SAL", "mean_autumn_SST", "mean_winter_SST"),
   
-  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH", "mean_autumn_SST", "I(mean_autumn_SST)^2", "mean_CHL")
+  macareux_moine_HR = c("log_dist_to_shore", "mean_SSH", "mean_autumn_SST", "mean_CHL")
 )
 
 
-n.iter = 300000
+n.iter = 200000
 n.burnin = 0.1 * n.iter
 n.chains = 3
 

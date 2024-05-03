@@ -208,8 +208,6 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
     parameters.to.save <- c("beta", "alpha")
   }
   
-  
-  
   # In one step
   # mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
   #                           data = data_nmix$data,
