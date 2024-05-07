@@ -179,7 +179,7 @@ corrplot::corrplot.mixed(combined_rasters2 %>% as_tibble() %>% cor(method = "pea
 # mean_autumn_SST cor w/ mean_winter_SST
 layers_to_keep <- c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", #"mean_autumn_SST",
                     #"sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST",
-                    "mean_SST", "sd_SST", "concavity", #"slope",
+                    "mean_SST", "sd_SST", #"slope",
                     "dist_to_shore", "bathymetry", "mean_CHL", 
                     #"mean_SAL", "mean_VEL", 
                     "sd_SAL",

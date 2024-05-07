@@ -10,9 +10,6 @@
 #'
 #' -------------------------------------------------------------------------------
 
-source("~/stage_M2/2.code/pt1_spOccupancy/format_data_for_spOccupancy.R")
-source("~/stage_M2/2.code/pt1_spOccupancy/model_selection_functions.R")
-load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
 
 run_model_without_kfold <- function(data.int = NULL, data_list = NULL, grid, species, selected_cov, add_spatial=FALSE, n.samples = 20000){
   # Wrapper for intPGOcc() function of spOccupancy

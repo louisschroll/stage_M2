@@ -171,13 +171,13 @@ migralion_eff <- prenup22_eff %>%
          transect_name = 1:nrow(.)) 
 
 migralion_obs <- prenup22_obs %>%
-  select(Espece, Effectif, geometry, Date_UTC, Time_UTC) %>% 
+  select(Espece, Effectif, geometry, Date_UTC, Time_UTC, Heure_UTC) %>% 
   bind_rows(postnup2022_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC, Heure_UTC)) %>% 
   bind_rows(postnup2023_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC, Heure_UTC)) %>% 
   bind_rows(prenup2023_obs %>% 
-              select(Espece, Effectif, geometry, Date_UTC, Time_UTC)) %>% 
+              select(Espece, Effectif, geometry, Date_UTC, Time_UTC, Heure_UTC)) %>% 
   rename(nom_fr = Espece,
          date = Date_UTC,
          effectif = Effectif) %>% 

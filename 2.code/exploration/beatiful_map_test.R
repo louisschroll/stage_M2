@@ -42,8 +42,8 @@ grid2 <- st_transform(grid, st_crs(world))
 ggplot() + 
   # geom_text(data=cities_sf, aes(x=lat, y=lon, label = nom),
   #           color = "darkblue", fontface = "bold", check_overlap = FALSE) +
-  geom_sf(data = grid2, aes(fill = mean.psi), lwd = 0.1) +
-  scale_fill_viridis_c() + 
+  #geom_sf(data = grid2, aes(fill = mean.psi), lwd = 0.1) +
+  #scale_fill_viridis_c() + 
   #coord_sf(xlim = c(2, 8), ylim = c(40, 45), expand = TRUE) +
   geom_sf(data = world, fill= "antiquewhite") +
   # select an area

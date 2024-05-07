@@ -12,20 +12,25 @@
 
 cat("\014")              # clear the console
 rm(list = ls())          # remove all variables of the work space
+
+# cluster
+adress <- "/lustre/schrolll/"
+# local 
+# adress <- ""
+
 # load packages
 library(tidyverse)
 library(sf)
 library(spOccupancy)
-library(openxlsx)
-library(patchwork)
 
 # load data
-load("1.data/all_seabirds_counts.rdata")
-load("1.data/covariates_data.rdata")
-load("1.data/countLL.rdata")
+load(paste0(adress, "1.data/all_seabirds_counts.rdata"))
+load(paste0(adress, "1.data/covariates_data.rdata"))
 
-source("2.code/pt1_spOccupancy/prediction_functions.R")
-source("2.code/pt1_spOccupancy/plot_functions.R")
+source(paste0(adress, "2.code/pt1_spOccupancy/prediction_functions.R"))
+source(paste0(adress, "2.code/pt1_spOccupancy/format_data_for_spOccupancy.R"))
+source(paste0(adress, "2.code/pt1_spOccupancy/model_selection_functions.R"))
+
 grid <- covariates_data %>% 
   mutate(id = 1:nrow(covariates_data)) %>% 
   st_transform(st_crs(pelmed_obs))
@@ -78,11 +83,6 @@ species_list <- migralion_obs %>%
   unique()
 
 n_iter <- length(species_list)
-pb <- txtProgressBar(min = 0,
-                     max = n_iter,
-                     style = 3,
-                     width = n_iter,
-                     char = "=") 
 
 for (i in 1:n_iter){
   
@@ -94,20 +94,17 @@ for (i in 1:n_iter){
                                           grid=grid, 
                                           species=species, 
                                           selected_cov=selected_cov,
-                                          n.samples = 100000)
-  save(model_result, file = paste0("3.results/spOccupancy_outputs/spOccupancy_",species,".RData"))
+                                          n.samples = 50000)
+  save(model_result, file = paste0(adress, "3.results/spOccupancy_outputs/spOccupancy_",species,".RData"))
   
   grid2 <- put_results_in_grid(grid, model_result = model_result, selected_cov) %>% 
     select(mean.psi, sd.psi)
   
   spOccupancy_res_grid[[paste0("mean_psi_", species)]] <- grid2$mean.psi
   spOccupancy_res_grid[[paste0("sd_psi_", species)]] <- grid2$sd.psi
-  
-  setTxtProgressBar(pb, i)
-}
-close(pb)
+  }
 
-plot(spOccupancy_res_grid)
+#plot(spOccupancy_res_grid)
 
-save(spOccupancy_res_grid, file = "3.results/grid_spOccupancy_results.RData")
+save(spOccupancy_res_grid, file = paste0(adress, "3.results/grid_spOccupancy_results.RData"))
 #st_write(spOccupancy_res_grid, dsn = "3.results/grid_spOccupancy_results.shp")

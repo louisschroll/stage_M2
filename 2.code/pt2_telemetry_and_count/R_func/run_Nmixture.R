@@ -208,20 +208,7 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
     parameters.to.save <- c("beta", "alpha")
   }
   
-  
-  
-  # In one step
-  # mcmc.output <- nimbleMCMC(code = int.Nmixture.model,
-  #                           data = data_nmix$data,
-  #                           constants = data_nmix$constants,
-  #                           inits = data_nmix$inits,
-  #                           monitors = parameters.to.save,
-  #                           niter = n.iter,
-  #                           nburnin = n.burnin,
-  #                           nchains = n.chains,
-  #                           samplesAsCodaMCMC = TRUE)
-  
-  # In several step
+  # Define model
   int.Nmixture.model <- nimbleModel(code = int.Nmixture.code, 
                                     constants = data_nmix$constants,
                                     data = data_nmix$data, 
@@ -232,6 +219,12 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
   # Configure model
   confo <- configureMCMC(int.Nmixture.model, monitors = parameters.to.save)
   
+  #confo$removeSampler(c("a[1]", "a[2]", "a[3]", "b[1]", "b[2]"))
+  #confo$addSampler("a[1]", "a[2]", type = "RW_block")
+  confo$removeSampler(paste0("beta[", 1:data_nmix$constants$n.occ.cov, "]"))
+  confo$addSampler(paste0("beta[", 1:data_nmix$constants$n.occ.cov, "]"), 
+                   type = "RW_block")
+  confo$printSamplers()
   ## Build and compile MCMC
   Rmcmco <- buildMCMC(confo)
   Cmodelo <- compileNimble(int.Nmixture.model)

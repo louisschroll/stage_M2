@@ -16,7 +16,7 @@ rm(list = ls())          # remove all variables of the work space
 # cluster
 adress <- "/lustre/schrolll/"
 # local 
-# adress <- ""
+adress <- ""
 
 load(paste0(adress, "1.data/all_seabirds_counts.rdata"))
 load(paste0(adress, "1.data/grid_cells.rdata"))
@@ -87,7 +87,7 @@ for (i in seq_along(species_vector)){
                                   n.iter = n.iter, 
                                   n.burnin = n.burnin, 
                                   n.chains = n.chains, 
-                                  compute_pvalues = TRUE)
+                                  compute_pvalues = F)
   save(samplesNmixture, file = paste0(adress, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
   
   grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov)
