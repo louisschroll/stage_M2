@@ -22,14 +22,14 @@ format_rsf_data_for_nimble <- function(df_RSF, selected_cov){
   # Define constants
   n.occ.cov <- length(selected_cov) + 1
   nindividual = n_distinct(df_RSF$individual_id)
-  XN = df_RSF %>% 
+  XN <- df_RSF %>% 
     select(all_of(selected_cov)) %>% 
     mutate(intercept = 1) %>% 
     relocate(intercept) %>% 
     as.matrix()
   
   constants <-  list(npoints = nrow(df_RSF),
-                     idind = get_new_id(df_RSF, id_column="individual_id"),
+                     idind = get_new_id(df_RSF, id_column = "individual_id"),
                      XN = XN,
                      nindividual = nindividual,
                      n.occ.cov = n.occ.cov,

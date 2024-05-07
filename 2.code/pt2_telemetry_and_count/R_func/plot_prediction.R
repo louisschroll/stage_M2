@@ -21,10 +21,11 @@
 load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
 load("~/stage_M2/1.data/countLL.rdata")
 load(file = "~/stage_M2/1.data/wind_farm_boundaries.RData")
-# wind_farm <- st_read(dsn = "~/stage_M2/1.data/EMODnet_HA_Energy_WindFarms_20231124", layer = "EMODnet_HA_Energy_WindFarms_pg_20231124") %>% 
-#   st_transform(crs = st_crs(pelmed_obs)) %>% 
-#   st_crop(st_bbox(grid)) %>% 
-#   select(geometry)
+wind_farm <- st_read(dsn = "~/stage_M2/1.data/EMODnet_HA_Energy_WindFarms_20231124",
+                     layer = "EMODnet_HA_Energy_WindFarms_pg_20231124") %>%
+  st_transform(crs = st_crs(pelmed_obs)) %>%
+  st_crop(st_bbox(grid)) %>%
+  select(geometry)
 
 plot_prediction <- function(new_grid,
                             add_colonies = F,
@@ -39,11 +40,13 @@ plot_prediction <- function(new_grid,
   # Plot the intensity of space use
   mean_psi_plot <- ggplot() +
     geom_sf(data = new_grid, aes(fill = mean_psi), color = NA, lwd = 0) +
-    scale_fill_distiller(palette = "Spectral", 
-                         breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
+    scale_fill_viridis_c(breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
                          labels = c("Low", "High")) +
+    # scale_fill_distiller(palette = "Spectral", 
+    #                      breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
+    #                      labels = c("Low", "High")) +
     geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    geom_sf(data = wind_farm, fill = NA, col = "black") +
+    #geom_sf(data = wind_farm, fill = NA, col = "black") +
     labs(title = plot_title) +
     theme_bw() +
     theme(
@@ -205,7 +208,7 @@ plot_occupancy <- function(grid_occupancy,
 
 blue <-  "#3d405b"
 red <- "#e07a5f"
-purple <-  "#81b29a"
+purple <-  "#30b29a"
 #orange <- "#f4d35e"
 orange <- "#8AB17D"
 ### Coeff
