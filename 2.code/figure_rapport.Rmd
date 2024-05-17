@@ -1,0 +1,351 @@
+---
+title: "figure_rapport"
+author: "Louis Schroll"
+date: "2024-05-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("sf")
+library("rnaturalearth")
+library(ggspatial)
+library(tidyverse)
+
+```
+
+
+```{r}
+cities = data.frame(nom=c("Montpellier", "Perpignan", "Narbonne", "Marseille"), pays=rep("FR",4))
+print(cities)
+
+library(RJSONIO)
+locateCountry = function(nameCity, codeCountry) {
+  cleanCityName = gsub(' ', '%20', nameCity)
+  url = paste(
+    "http://nominatim.openstreetmap.org/search?city="
+    , cleanCityName
+    , "&countrycodes="
+    , codeCountry
+    , "&limit=9&format=json"
+    , sep="")
+  resOSM = fromJSON(url)
+  if(length(resOSM) > 0) {
+    return(c(resOSM[[1]]$lon, resOSM[[1]]$lat))
+  } else return(rep(NA,2))
+}
+
+coord = t(apply(cities, 1, function(aRow) locateCountry(aRow[1], aRow[2])))
+cities_sf <- as_tibble(coord) %>%
+  rename(lat = V1, lon = V2) %>%
+  bind_cols(cities) %>%
+  st_as_sf(coords = c("lat", "lon"))
+
+
+# https://r-spatial.org/r/2018/10/25/ggplot2-sf.html
+world <- ne_countries(scale = "medium", returnclass = "sf")
+st_crs(cities_sf) <- st_crs(world)
+class(world)
+
+area <- st_crop(
+  x = world,
+  xmin = 2.6,
+  ymin = 42,
+  xmax = 6,
+  ymax = 44
+)
+```
+
+
+```{r}
+france <- st_crop(
+  x = world,
+  xmin = -4.5,
+  ymin = 41,
+  xmax = 8,
+  ymax = 51
+) %>%
+  filter(sovereignt != "United Kingdom")
+
+rectangle <- st_bbox(grid2) %>%
+  as_tibble() %>%
+  mutate(name = c("xmin", "ymin", "xmax", "ymax")) %>%
+  pivot_wider(values_from = x, names_from = name) %>%
+  mutate(xmin = xmin - 0.15,
+         xmax = xmax + 0.15,
+         ymax = ymax + 0.15,
+         ymin = ymin - 0.15)
+
+map_france <- ggplot() + geom_sf(data = france, fill= "antiquewhite") +
+  geom_rect(data = rectangle,
+            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = NA, color = "red") +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.background = element_blank())
+```
+
+
+```{r}
+city_names <- bind_cols(st_drop_geometry(cities_sf),
+                        st_coordinates(cities_sf)) %>%
+  mutate(Y = case_when(nom == "Narbonne" ~ Y - 0.06,
+            TRUE ~ Y + 0.06))
+
+grid2 <- st_transform(grid, st_crs(world))
+lion_gulf_plot <- ggplot() +
+  geom_sf(data = grid2, lwd = 0.1, fill = NA) +
+  geom_sf(data = area, fill= "antiquewhite") +
+  geom_text(data=city_names,
+            aes(x=X, y=Y, label = nom),
+            color = "black",
+            fontface = "bold",
+            check_overlap = T,
+            size = 2) +
+  # select an area
+  # add scale (ggspatial package)
+  annotation_scale(location = "br", width_hint = 0.3) +
+  # add noth arrow (ggspatial package)
+  annotation_north_arrow(location = "tr", which_north = "true",
+                        # pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+                         style = north_arrow_fancy_orienteering) +
+  annotate(geom = "text", x = 4.5, y = 42.7, label = "Gulf of Lion",
+           fontface = "italic", color = "grey22", size = 6) +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        panel.grid = element_blank()) +
+  geom_sf(data = cities_sf)
+```
+
+
+```{r}
+library(patchwork)
+lion_gulf_plot +
+  inset_element(
+    map_france,
+    left = 0.1,
+    bottom = 0.65,
+    right = 0.4,
+    top = 1,
+    align_to = "full"
+  )
+```
+
+
+
+# Figure with the occupancy maps for all species
+```{r}
+local_path <- "~/stage_M2/"
+library(readxl)
+library(tidyverse)
+library(patchwork)
+library(sf)
+library(kableExtra)
+
+load(file = paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
+load(file = paste0(local_path, "1.data/wind_farm_boundaries.RData"))
+plot_occupancy <- function(grid_occupancy, 
+                           species,
+                           add_colonies = F, 
+                           species_colony=NULL, 
+                           legend_position="bottom", 
+                           plot_title = "", 
+                           plot_title_size = 10,
+                           legend_title_size = 9,
+                           axis_text_size = 6,
+                           plot_font = "Arial"){
+  
+  grid_occupancy_sp <- grid_occupancy %>% 
+  select(all_of(c(
+    "grid_c",
+    paste0("mean_psi_", species),
+    paste0("sd_psi_", species)
+  ))) 
+
+  names(grid_occupancy_sp) <- c("mean_psi", "sd_psi", "grid_c")
+  
+  # Plot the intensity of space use
+  mean_psi_plot <- ggplot() +
+    geom_sf(data = grid_occupancy_sp, aes(fill = { mean_psi }), color = NA) +
+    scale_fill_viridis_c(breaks = c(min(grid_occupancy_sp$mean_psi), max(grid_occupancy_sp$mean_psi)),
+                         labels = c("Low", "High")) +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      #text = element_text(family = plot_font),
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = plot_title_size),
+      plot.title.position = 'plot',
+      axis.text = element_blank() #element_text(size = axis_text_size)
+    ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Presence probability",
+        limits = c(0,1),
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size,
+          #family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        ticks = FALSE,
+        title.hjust = .5,
+        barwidth = unit(6, 'lines'),
+        barheight = unit(.4, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none")
+  
+  if (add_colonies) {
+    mean_psi_plot <- mean_psi_plot +
+      geom_sf(data = countLL %>% filter(Species == species_colony) %>% st_crop(st_bbox(contour_golfe)),
+              pch = 16, size = 2)
+  }
+  
+  # Plot uncertainty in the prediction
+  sd_psi_plot <- ggplot() +
+    geom_sf(data = grid_occupancy_sp, aes(fill = sd_psi), color = NA) +
+    scale_fill_viridis_c(option = "inferno",
+                         breaks = c(min(grid_occupancy_sp$sd_psi), max(grid_occupancy_sp$sd_psi)),
+                         labels = c("Low", "High")
+    ) +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      #text = element_text(family = plot_font),
+          legend.position = legend_position,
+          legend.title = element_blank(),
+          plot.title = element_text(hjust = 0.5, 
+                                    face = "bold", 
+                                    size = plot_title_size),
+          axis.text = element_blank() #element_text(size = axis_text_size)
+          ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Standard deviation",
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size,
+          #family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        ticks = FALSE,
+        title.hjust = .5,
+        barwidth = unit(6, 'lines'),
+        barheight = unit(.4, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none")
+  
+  return(list(mean_psi_plot = mean_psi_plot, sd_psi_plot = sd_psi_plot))
+}
+plot(spOccupancy_res_grid)
+ncol(spOccupancy_res_grid)
+
+grid_occupancy <- spOccupancy_res_grid
+mean_psi <- "mean_psi_mouette_rieuse_HR"
+species <- "mouette_rieuse_HR"
+
+
+
+ggplot() +
+    geom_sf(data = grid_occupancy, aes(fill = !!sym(mean_psi)), color = NA)
+
+# OP = occupancy plot
+OPrieuse <- plot_occupancy(grid_occupancy = grid_occupancy,
+                                  species = "mouette_rieuse_HR")
+
+OPmelano_HR <- plot_occupancy(grid_occupancy = grid_occupancy,
+                                  species = "mouette_melanocephale_HR")
+
+OPmelano_R <- plot_occupancy(grid_occupancy = grid_occupancy,
+                                  species = "mouette_melanocephale_R")
+
+OPleucophee_HR <- plot_occupancy(grid_occupancy = grid_occupancy,
+                                  species = "goeland_leucophee_HR")
+
+OPleucophee_R <- plot_occupancy(grid_occupancy = grid_occupancy,
+                                  species = "goeland_leucophee_R")
+
+OPrieuse$mean_psi_plot + OPmelano_HR$mean_psi_plot + 
+  OPleucophee_HR$mean_psi_plot + OPleucophee_R$mean_psi_plot +
+  plot_layout(guides = "collect")
+
+
+new_gridocc <- grid_occupancy %>% 
+  #select(1:9) %>% 
+  select(starts_with("mean_psi")) %>% 
+    mutate(cells_id = 1:nrow(.)) %>% 
+  pivot_longer(cols = starts_with("mean_psi"), 
+               values_to = "mean_psi",
+               names_to = "species_season") %>% 
+  mutate(species_season = str_replace(string=species_season, 
+                                      pattern = "(.*?)mean_psi_(.*?)", 
+                                      "\\1")) %>% 
+  merge(grid_occupancy %>% 
+           # select(1:9) %>% 
+            select(starts_with("sd_psi")) %>% 
+            mutate(cells_id = 1:nrow(.)) %>%
+            pivot_longer(cols = starts_with("sd_psi"), 
+                         values_to = "sd_psi",
+                         names_to = "species_season") %>% 
+            mutate(species_season = str_replace(string=species_season, 
+                                                pattern = "(.*?)sd_psi_(.*?)", 
+                                                "\\1")) %>% 
+          as_tibble())
+
+all(new_gridocc$species_season.x == new_gridocc$species_season.y)
+```
+
+
+```{r, fig.height=10, fig.width=10}
+ggplot() +
+    geom_sf(data = new_gridocc, aes(fill = mean_psi), color = NA) +
+    facet_wrap(~species_season, ncol = 3) +
+    scale_fill_viridis_c(breaks = c(0, 1),
+                         labels = c("Low", "High")) +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      #text = element_text(family = plot_font),
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = plot_title_size),
+      plot.title.position = 'plot',
+      axis.text = element_text(size = axis_text_size),,
+      strip.text = element_text(face = "bold", size = plot_title_size),
+      strip.background = element_rect(fill = "white", linetype = "solid",
+                                      color = "black", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = "black", linewidth = 0.9)
+    ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Presence probability",
+        limits = c(0,1),
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size,
+          #family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        ticks = FALSE,
+        title.hjust = .5,
+        barwidth = unit(6, 'lines'),
+        barheight = unit(.4, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none")
+```
+
