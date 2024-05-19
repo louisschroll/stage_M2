@@ -56,7 +56,7 @@ format_name <- function(dataset, crs_ref){
 }
 
 
-add_session_column2 <- function(data_obs, data_eff) {
+add_session_column <- function(data_obs, data_eff) {
   asso_session_date <- unique(data_eff %>% as_tibble %>% select(session, date))
   data_obs$session <- NA
   for (sessionId in unique(asso_session_date$session)){
@@ -66,6 +66,47 @@ add_session_column2 <- function(data_obs, data_eff) {
   data_obs <- data_obs %>% mutate(session = as.factor(session))
   return(data_obs)
 }
+
+
+split_periods <- function(data_obs, session_summer, session_winter){
+  # Create a new column indicating the species and the season
+  data_obs <- data_obs %>% 
+    mutate(species_name = case_when(
+      session %in% session_summer ~ paste0(str_replace_all(nom_fr, " ", "_"), "_summer"),
+      session %in% session_winter ~ paste0(str_replace_all(nom_fr, " ", "_"), "_winter")
+    ))
+  # get species viewed less than 5 times or viewed at only one survey (no repicate)
+  species_to_exclude <- data_obs %>% 
+    as_tibble() %>%
+    count(species_name) %>%
+    filter(n<=5) %>% 
+    pull(species_name)
+  
+  species_to_exclude2 <- data_obs %>% 
+    as_tibble() %>%
+    group_by(species_name) %>% 
+    summarise(n_replicate = length(unique(session))) %>% 
+    filter(n_replicate == 1) %>% 
+    pull(species_name)
+  
+  species_to_exclude <- unique(species_to_exclude, species_to_exclude2)
+  
+  # Filter NA, indeterminate species and species without enough data
+  data_obs <- data_obs %>% 
+    filter(!(species_name %in% species_to_exclude)) %>% 
+    filter(!is.na(species_name)) %>% 
+    filter(str_detect(string = species_name, pattern = "ind", negate = T))
+  
+  return(data_obs)
+}
+
+# rename_species <- function(data_obs, tibble_name){
+#   data_obs %>% 
+#     mutate(nom_fr = case_when(
+#       nom_fr %in% tibble_name$old_name ~ tibble_name$new_name[match(nomCite, tibble_name$old_name)],
+#       TRUE ~ nom_fr
+#     )) 
+# }
 
 
 # Pelmed 2017 -> 2020
@@ -78,16 +119,22 @@ pelmed_obs <- pelobs %>%
   select(lat, lon, podSize, transect, routeType, sighting, date, 
          hhmmss, famille_fr, nom_fr, geometry) %>% 
   format_name(ref_coordinate_system) %>%
-  mutate(nom_fr = ifelse(nom_fr=="puffin cendre / de scopoli", "puffin de scopoli", nom_fr)) %>%
-  mutate(nom_fr = ifelse(nom_fr=="grand puffin ind", "puffin de scopoli", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>%
-  mutate(nom_fr = ifelse(nom_fr=="oceanite ind", "oceanite tempete", nom_fr)) %>%
+  mutate(nom_fr = case_when(
+    nom_fr == "puffin cendre / de scopoli" ~ "puffin de scopoli",
+    nom_fr == "grand puffin ind" ~ "puffin de scopoli",
+    nom_fr == "goeland gris ind" ~ "goeland leucophee",
+    nom_fr == "grand goeland ind" ~ "goeland leucophee",
+    nom_fr == "petit puffin ind" ~ "petit puffin",
+    nom_fr == "puffin des baleares" ~ "petit puffin",
+    nom_fr == "puffin yelkouan" ~ "petit puffin",
+    nom_fr == "oceanite ind" ~ "oceanite tempete",
+    TRUE ~ nom_fr  
+  )) %>%
   rename(effectif = podSize) %>% 
-  mutate(session = as.factor(year))
+  mutate(session = as.factor(year)) %>% 
+  split_periods(session_summer = c("2017","2018", "2019", "2021"), 
+                session_winter = c(""))
+
 
 pelmed_eff <- peleff %>% 
   select(effort, date, hhmmss, seaState, lat, lon, legLengKm, geometry) %>% 
@@ -109,22 +156,30 @@ samm_eff <- effsamm %>%
          session = as.factor(nom_suivi %>% str_remove("_")),
          transect_name = 1:nrow(.),
          Time = scale(as.Date(DATE_TIME1))) %>% 
-  st_transform(crs = ref_coordinate_system)
+  st_transform(crs = ref_coordinate_system) %>% 
+  filter(session != "SAMM_1(2summer)")
 
 samm_obs <- birdsamm %>% 
   select(transect, passage, flight, date, hhmmss, podSize, observer, 
          lat, lon, speed, altitude, famille_fr, nom_fr, geometry) %>% 
   rename(effectif = podSize) %>% 
   format_name(ref_coordinate_system) %>%
-  mutate(nom_fr = ifelse(nom_fr=="puffin cendre / de scopoli", "puffin de scopoli", nom_fr)) %>%
-  mutate(nom_fr = ifelse(nom_fr=="grand puffin ind", "puffin de scopoli", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="grand goeland ind", "goeland leucophee", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="goeland gris ind", "goeland leucophee", nom_fr)) %>%
-  mutate(nom_fr = ifelse(nom_fr=="petit puffin ind", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="oceanite ind", "oceanite tempete", nom_fr)) %>%
-  add_session_column2(samm_eff)
+  mutate(nom_fr = case_when(
+    nom_fr == "puffin cendre / de scopoli" ~ "puffin de scopoli",
+    nom_fr == "grand puffin ind" ~ "puffin de scopoli",
+    nom_fr == "grand goeland ind" ~ "goeland leucophee",
+    nom_fr == "goeland gris ind" ~ "goeland leucophee",
+    nom_fr == "petit puffin ind" ~ "petit puffin",
+    nom_fr == "oceanite ind" ~ "oceanite tempete",
+    nom_fr == "pingouin ou guillemot" ~ "alcide ind",
+    TRUE ~ nom_fr  
+  )) %>%
+  add_session_column(samm_eff) %>% 
+  filter(session != "SAMM_1(2summer)") %>% 
+  split_periods(session_summer = c(""), 
+                session_winter = c("SAMM1(1winter)", "SAMM2(1winter)"))
 
-# PNM Golfe du Lion
+# PNM Golfe du Lion ----
 load("~/stage_M2/1.data/megaobs.rdata")
 
 pnm_eff <- transect %>% 
@@ -134,29 +189,29 @@ pnm_eff <- transect %>%
          session = as.factor(camp %>% str_remove("_")),
          transect_name = 1:nrow(.)) 
 
-
 pnm_obs <- obs_oiseaux %>% 
   select(espece, famille, date, heure, lat, long, nb, geometry) %>% 
   mutate(date = dmy(date)) %>% 
   rename(nom_fr = espece,
          effectif = nb) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="Puffin Yelkouan de Mediterranee", "petit puffin", nom_fr)) %>%
   format_name(ref_coordinate_system) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="goeland", "goeland leucophee", nom_fr)) %>% 
-  add_session_column2(pnm_eff)
+  mutate(nom_fr = case_when(
+    nom_fr == "puffin yelkouan de mediterranee" ~ "petit puffin",
+    nom_fr == "puffin des baleares" ~ "petit puffin",
+    nom_fr == "goeland" ~ "goeland leucophee",
+    nom_fr == "puffin" ~ "puffin ind",
+    TRUE ~ nom_fr
+  )) %>% 
+  add_session_column(pnm_eff) %>% 
+  split_periods(session_summer = c("2019printemps", "2020printemps", "2021printemps"), 
+                session_winter = c("2019automne", "2020automne"))
 
 
-# Migralion 2022, 2023
+# Migralion 2022, 2023 ----
 load("~/stage_M2/1.data/prenup2022_v3.rdata")
 load("~/stage_M2/1.data/postnup2022.rdata")
 load("~/stage_M2/1.data/postnup2023.rdata")
 load("~/stage_M2/1.data/prenup2023.rdata")
-
-# session_migralion <- c(rep("prenup_2022_A", 3), rep("prenup_2022_B", 4), 
-#                        rep("postnup_2022_A", 5), rep("postnup_2022_B", 6), 
-#                        rep("prenup_2023_A", 6), rep("prenup_2023_B", 7), 
-#                        rep("postnup_2023_A", 7), rep("prenup_2023_B", 5))
 
 session_migralion <- c(rep("prenup2022", 7), 
                        rep("postnup2022", 11), 
@@ -183,12 +238,25 @@ migralion_obs <- prenup22_obs %>%
          effectif = Effectif) %>% 
   mutate(date = as.Date(date)) %>% 
   format_name(ref_coordinate_system) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleares", "petit puffin", nom_fr)) %>%
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan/baleare", "petit puffin", nom_fr)) %>% 
-  add_session_column2(migralion_eff) %>% 
-  drop_na(session)
+  mutate(nom_fr = case_when(
+    nom_fr == "puffin yelkouan" ~ "petit puffin",
+    nom_fr == "puffin des baleares" ~ "petit puffin",
+    nom_fr == "puffin yelkouan/baleares" ~ "petit puffin",
+    nom_fr == "puffin yelkouan/baleare" ~ "petit puffin",
+    nom_fr %in% c("labbe pomarin", "labbe parasite", "labbe parasite/pomarin") ~ "labbe",
+    TRUE ~ nom_fr  
+  )) %>%
+  add_session_column(migralion_eff) %>% 
+  drop_na(session) %>% 
+  split_periods(session_summer = c("prenup2022", "prenup2023"), 
+                session_winter = c("postnup2022", "postnup2023")) %>% 
+  mutate(species_name = case_when(
+    species_name == "mouette_pygmee_summer" ~ "mouette_pygmee_winter",
+    species_name == "oceanite_tempete_winter" ~ "oceanite_tempete_summer",
+    species_name == "puffin_de_scopoli_winter" ~ "puffin_de_scopoli_summer",
+    species_name == "macareux_moine_winter" ~ "macareux_moine_summer",
+    TRUE ~ species_name
+  ))
 
 # migralion_obs %>% ggplot() +
 #   geom_sf(aes(color = as.factor(year))) +
@@ -246,20 +314,55 @@ french_name <- c("goeland leucophee",
 ferme_obs <- efglx %>% 
   mutate(nom_fr = case_when(
     nomCite %in% scientific_name ~ french_name[match(nomCite, scientific_name)],
-    TRUE ~ nomCite)) %>%
+    TRUE ~ nomCite
+  )) %>%
   select("nom_fr", "denombrementMax", "denombrementMin", "jourDateDebut") %>% 
   rename(date = jourDateDebut) %>%
   format_name(ref_coordinate_system) %>% 
   #add_session_column() %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin cendre", "puffin de scopoli", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin yelkouan", "petit puffin", nom_fr)) %>% 
-  mutate(nom_fr = ifelse(nom_fr=="puffin des baleares", "petit puffin", nom_fr)) 
-  
+  mutate(nom_fr = case_when(
+    nom_fr == "puffin cendre" ~ "puffin de scopoli",
+    nom_fr == "puffin yelkouan" ~ "petit puffin",
+    nom_fr == "puffin des baleares" ~ "petit puffin",
+    TRUE ~ nom_fr
+  )) %>% 
+  mutate(date = as.Date(date),
+         month = month(date)) %>% 
+  mutate(species_name = case_when(
+    month %in% c(1:3, 9:12) ~ paste0(str_replace_all(nom_fr, " ", "_"), "_winter"),
+    month %in% c(4:8) ~ paste0(str_replace_all(nom_fr, " ", "_"), "_summer"),
+  )) 
 
 ferme_eff <- NULL
 
 
-# Save the data in a .radta
+# Filter the species with enough data across the data sets and save ----
+species_to_keep <- as_tibble(pelmed_obs) %>% count(species_name) %>% 
+  full_join(as_tibble(samm_obs) %>% count(species_name), 
+            by = "species_name") %>% 
+  full_join(as_tibble(pnm_obs) %>% count(species_name), 
+            by = "species_name") %>% 
+  full_join(as_tibble(migralion_obs) %>% count(species_name), 
+            by = "species_name") %>% 
+  # full_join(as_tibble(ferme_obs) %>% count(species_name), 
+  #           by = "species_name") %>% 
+  mutate(row_sum = rowSums(select(., -species_name), na.rm = TRUE)) %>% arrange(row_sum) %>% print(n = 50)
+  filter(row_sum > 95) %>% 
+  pull(species_name)
+
+migralion_obs <- migralion_obs %>% 
+  filter(species_name %in% species_to_keep)
+
+pnm_obs <- pnm_obs %>% 
+  filter(species_name %in% species_to_keep)
+
+samm_obs <- samm_obs %>% 
+  filter(species_name %in% species_to_keep)
+
+pelmed_obs <- pelmed_obs %>% 
+  filter(species_name %in% species_to_keep)
+
+# Save the data in a .rdata
 save(pelmed_obs, pelmed_eff, 
      samm_obs, samm_eff, 
      pnm_obs, pnm_eff,

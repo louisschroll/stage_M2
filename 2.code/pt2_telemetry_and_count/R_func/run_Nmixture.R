@@ -15,9 +15,11 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
   # Nimble code
   if (compute_pvalues){
     data_nmix$constants$npoints_dataset <- c(0, table(data_nmix$constants$dataset_nb) %>% unname())
+    data_nmix$inits$kappa <- 0.5
     # Version with bayesian p-values computation
     int.Nmixture.code <- nimbleCode({
       # Priors
+      kappa ~ dunif(min = 0.01, max = 100)
       for(i in 1:n.occ.cov){
         beta[i] ~ dnorm(0,1)
       }
@@ -32,7 +34,8 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
       # State process
       for(i in 1:nsites_total){
         log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
-        N[i] ~ dpois(lambda[i])
+        succprob <- kappa / (kappa + lambda[i])
+        N[i] ~ dnegbin(prob = succprob, size = kappa)
       }
       
       # Observation process

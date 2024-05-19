@@ -45,7 +45,7 @@ combine_ncfile <- function(path_non_int, path_interim){
 
 
 # ---- Import Sea Surface Temperature (SST) and average by season -----
-raster_sst <- combine_ncfile("1.data/copernicus_data/SST.nc", "1.data/copernicus_data/SST_int.nc") %>% 
+raster_sst <- combine_ncfile("0.raw_data/copernicus_data/SST.nc", "0.raw_data/copernicus_data/SST_int.nc") %>% 
   terra::crop(study_area) %>% 
   terra::extend(study_area) 
 
@@ -66,7 +66,7 @@ if (FALSE) {
   mean_season %>% mutate(mean_value = scale(mean_value)) %>%
     ggplot(aes(x=x, y=y, fill=mean_value)) +
       geom_raster() +
-      facet_wrap(~season_nb) +
+      facet_wrap(~season_nb, scales = "free") +
       scale_fill_distiller(palette = "Spectral") 
 }
 # Create one col for each season and compute all season mean SST
@@ -107,9 +107,9 @@ plot(raster_static_cov)
 # Sea surface heigth (SSH) is too correlated with dist_to_shore and bathymetry
 # And sd(chl) to correlated with mean(chl)
 
-CHL <- combine_ncfile("1.data/copernicus_data/CHL.nc", "1.data/copernicus_data/CHL_int.nc") 
-SAL <- combine_ncfile("1.data/copernicus_data/SAL.nc", "1.data/copernicus_data/SAL_int.nc") 
-SSH <- combine_ncfile("1.data/copernicus_data/SSH.nc", "1.data/copernicus_data/SSH_int.nc") 
+CHL <- combine_ncfile("0.raw_data/copernicus_data/CHL.nc", "0.raw_data/copernicus_data/CHL_int.nc") 
+SAL <- combine_ncfile("0.raw_data/copernicus_data/SAL.nc", "0.raw_data/copernicus_data/SAL_int.nc") 
+SSH <- combine_ncfile("0.raw_data/copernicus_data/SSH.nc", "0.raw_data/copernicus_data/SSH_int.nc") 
 
 raster_dynamic_cov <- c(app(CHL, mean), app(CHL, sd),
   app(SAL, mean), app(SAL, sd),
@@ -118,12 +118,12 @@ raster_dynamic_cov <- c(app(CHL, mean), app(CHL, sd),
   terra::crop(raster_mean_SST) %>% 
   terra::extend(raster_mean_SST) 
 
-VEL <- combine_ncfile("1.data/copernicus_data/velocity.nc", "1.data/copernicus_data/velocity_int.nc") %>% 
+VEL <- combine_ncfile("0.raw_data/copernicus_data/velocity.nc", "0.raw_data/copernicus_data/velocity_int.nc") %>% 
   terra::resample(raster_mean_SST) 
 
-# EZD <- rast("1.data/copernicus_data/euphotic_depth.nc")%>%
+# EZD <- rast("0.raw_data/copernicus_data/euphotic_depth.nc")%>%
 #   terra::resample(raster_mean_SST)
-# NPP <- rast("1.data/copernicus_data/NPP.nc") %>%
+# NPP <- rast("0.raw_data/copernicus_data/NPP.nc") %>%
 #   terra::resample(raster_mean_SST)
 raster_dynamic_cov <- c(raster_dynamic_cov, 
                         app(VEL, mean), app(VEL, sd)
@@ -201,3 +201,33 @@ plot(final_raster)
 
 # save 
 terra::writeRaster(final_raster, filename = "1.data/all_covariates.tif", overwrite=TRUE)
+
+
+
+# Plot for annexes
+layers_to_plot1 <- c(
+  "mean_winter_SST", "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST",
+                    "sd_winter_SST", "sd_spring_SST", "sd_summer_SST", "sd_autumn_SST",
+  "slope",
+  "dist_to_shore", "bathymetry"
+                    # "mean_CHL", "sd_CHL",
+                    # "mean_SAL", "sd_SAL", "mean_VEL",  "sd_VEL", 
+                    # "mean_SSH", "sd_SSH"
+  )
+plot_rasters1 <- combined_rasters2[[c(layers_to_plot1)]]
+
+plot(plot_rasters1, legend = FALSE, nc = 4)
+
+layers_to_plot2 <- c(
+  "mean_CHL", "sd_CHL",
+  "mean_SAL", "sd_SAL", "mean_VEL",  "sd_VEL",
+  "mean_SSH", "sd_SSH"
+)
+plot_rasters2 <- combined_rasters2[[c(layers_to_plot2)]]
+
+plot(plot_rasters2, legend = FALSE, nc = 4)
+
+library(cowplot)
+plot_grid(plotlist = list(covarplot_pt1, covarplot_pt2))
+
+
