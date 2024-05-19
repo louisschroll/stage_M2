@@ -18,14 +18,14 @@
 #' for which we want to plot colony
 #' -------------------------------------------------------------------------------
 
-load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
-load("~/stage_M2/1.data/countLL.rdata")
-load(file = "~/stage_M2/1.data/wind_farm_boundaries.RData")
-wind_farm <- st_read(dsn = "~/stage_M2/1.data/EMODnet_HA_Energy_WindFarms_20231124",
-                     layer = "EMODnet_HA_Energy_WindFarms_pg_20231124") %>%
-  st_transform(crs = st_crs(pelmed_obs)) %>%
-  st_crop(st_bbox(grid)) %>%
-  select(geometry)
+# load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
+# load("~/stage_M2/1.data/countLL.rdata")
+# load(file = "~/stage_M2/1.data/wind_farm_boundaries.RData")
+# wind_farm <- st_read(dsn = "~/stage_M2/1.data/EMODnet_HA_Energy_WindFarms_20231124",
+#                      layer = "EMODnet_HA_Energy_WindFarms_pg_20231124") %>%
+#   st_transform(crs = st_crs(pelmed_obs)) %>%
+#   st_crop(st_bbox(grid)) %>%
+#   select(geometry)
 
 plot_prediction <- function(new_grid,
                             add_colonies = F,

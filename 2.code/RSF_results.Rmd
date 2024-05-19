@@ -90,7 +90,11 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(mcmc.output = samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
+                            grid, 
+                            selected_cov, 
+                            include_intercept = F, 
+                            rsf_intercept = "beta_pop[1]")
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -101,7 +105,9 @@ df_RSF <- df_RSF %>% filter(month %in% 4:8)
 plots_rsf_mean 
 plots_rsf$sd_psi_plot
 ggplot() + 
-  geom_point(data = df_RSF %>% filter(case==1), aes(x=X, y=Y, color = as.factor(individual_id)), alpha = 0.1) +
+  geom_point(data = df_RSF %>% filter(case==1), 
+             aes(x=X, y=Y, color = as.factor(individual_id)), 
+             alpha = 0.1) +
   geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite")+
   theme_bw() +
   theme(legend.position = "none") 
@@ -110,6 +116,20 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = "Mean value used / available habitat")
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
+
+grid_RSF$mean_psi
 ```
 
 
@@ -133,7 +153,8 @@ df_RSF <- df_RSF %>% filter(month %in% 4:8)
 plots_rsf_mean 
 plots_rsf$sd_psi_plot
 ggplot() + 
-  geom_point(data = df_RSF %>% filter(case==1), aes(x=X, y=Y), alpha = 0.1) +
+  geom_point(data = df_RSF %>% filter(case==1), 
+             aes(x=X, y=Y), alpha = 0.1) +
   geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") 
 
 mcmcplots::traplot(samplesRSF)
@@ -141,6 +162,22 @@ mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
 ```
+
+```{r}
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = "Mean value used / available habitat")
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
+```
+
+
 
 
 # Caugek hors repro
@@ -170,6 +207,18 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = "Mean value used / available habitat")
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
 ```
 
 
@@ -200,6 +249,18 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = "Mean value used / available habitat")
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
 ```
 
 
@@ -230,6 +291,18 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = "Mean value used / available habitat")
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
 ```
 
 
@@ -260,6 +333,16 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot()
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
 ```
 
 # yelkouan repro
@@ -289,6 +372,16 @@ mcmcplots::traplot(samplesRSF)
 mcmcplots::denplot(samplesRSF)
 
 MCMCvis::MCMCsummary(samplesRSF) %>% knitr::kable()
+
+df_RSF %>% 
+  as_tibble() %>% 
+  select(all_of(selected_cov), case) %>% 
+  pivot_longer(-case, names_to = "cov") %>% 
+  ggplot(aes(y=value, x = as.factor(case))) +
+  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  geom_boxplot()
+
+MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
 ```
 
 

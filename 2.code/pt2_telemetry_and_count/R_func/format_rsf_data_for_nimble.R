@@ -40,7 +40,7 @@ format_rsf_data_for_nimble <- function(df_RSF, selected_cov){
   
   # Inits
   inits <-  list(beta_pop = rep(0, n.occ.cov),
-                 sd_pop = runif(n.occ.cov, 0, 5),
+                 sd_pop = runif(n.occ.cov-1, 0, 5),
                  beta_ind = matrix(0, ncol = n.occ.cov, nrow = nindividual)
   )
   return(list(data = data, constants = constants, inits = inits))

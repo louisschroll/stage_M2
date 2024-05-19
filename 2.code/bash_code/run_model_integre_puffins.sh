@@ -19,4 +19,4 @@ echo « Running on: $SLURM_NODELIST »
 ##load R
 module load singularity
 
-singularity exec R-4.3.2-equipe-HAIR.img Rscript /lustre/schrolll/2.code/pt2_telemetry_and_count/all_models_telemetry_count2.R
+singularity exec R-4.3.2-equipe-HAIR.img Rscript /lustre/schrolll/2.code/pt2_telemetry_and_count/all_models_yelkouan.R

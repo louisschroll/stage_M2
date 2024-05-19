@@ -11,7 +11,13 @@
 #' -------------------------------------------------------------------------------
 
 
-run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains = 3, compute_pvalues = F, zero_inflated = F, overdispersion = F){
+run_Nmixture <- function(data_nmix, 
+                         n.iter = 100000, 
+                         n.burnin = 10000, 
+                         n.chains = 3, 
+                         compute_pvalues = T, 
+                         zero_inflated = F, 
+                         overdispersion = F){
   # Nimble code
   if (compute_pvalues){
     data_nmix$constants$npoints_dataset <- c(0, table(data_nmix$constants$dataset_nb) %>% unname())
@@ -64,6 +70,7 @@ run_Nmixture <- function(data_nmix, n.iter = 100000, n.burnin = 10000, n.chains 
         fit.rep[nd] <- sum(E.rep[(1 + npoints_dataset[nd]):(npoints_dataset[nd+1] + npoints_dataset[nd])])
       }      
     })
+    
     parameters.to.save <- c("beta", "alpha", "fit", "fit.rep")
   } else if (zero_inflated) {
     data_nmix$constants$npoints_dataset <- c(0, table(data_nmix$constants$dataset_nb) %>% unname())

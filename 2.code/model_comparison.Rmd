@@ -72,20 +72,24 @@ best_cov <- list(
 ```{r load scopoli data}
 species <- "puffin_de_scopoli_R"
 load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata"))
-load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species,".RData"))
+#load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species,".RData"))
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 
 selected_cov <- best_cov[[species]]
 
-samples_spOcc <- model_result$beta.samples
+#samples_spOcc <- model_result$beta.samples
 
 # Make predictions
 grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov)
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+#grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
 grid_int <- make_prediction(samplesint, 
                             grid, 
                             selected_cov, 
                             rsf_intercept = "beta_pop[1]")
+load(paste0(local_path, "3.results/prediction_grid/RSF_grid_puffin_de_scopoli_R.rdata"))
+
+save(grid_nmix, grid_RSF, grid_int,
+       file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
 ```
 
 
@@ -187,23 +191,27 @@ plot_left <- (coefficient_plot / precision_plot) +
 
 ## Repro
 
-```{r load scopoli data}
+```{r load caugek data}
 species <- "sterne_caugek_R"
 load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata"))
-load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species,".RData"))
+#load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species,".RData"))
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 
 selected_cov <- best_cov[[species]]
 
-samples_spOcc <- model_result$beta.samples
+#samples_spOcc <- model_result$beta.samples
 
 # Make predictions
 grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov)
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+#grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
 grid_int <- make_prediction(samplesint, 
                             grid, 
                             selected_cov, 
                             rsf_intercept = "beta_pop[1]")
+
+load(paste0(local_path, "3.results/prediction_grid/RSF_grid_sterne_caugek_R.rdata"))
+save(grid_nmix, grid_RSF, grid_int,
+       file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 ```
 
 

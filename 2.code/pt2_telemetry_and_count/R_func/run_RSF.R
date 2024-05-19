@@ -21,7 +21,6 @@ run_RSF <- function(rsf_list, n.iter = 11000, n.burnin = 1000, thin = 1, n.chain
   rsf.nimble <- nimbleCode({
     # Priors
     beta_pop[1] ~ dnorm(0, 1)
-    sd_pop[1] ~ dunif(0, 1e2)
     for(j in 1:nindividual){
       # add individual heterogeneity
       beta_ind[j, 1] ~ dnorm(beta_pop[1], 100)
@@ -29,11 +28,11 @@ run_RSF <- function(rsf_list, n.iter = 11000, n.burnin = 1000, thin = 1, n.chain
     
     for(i in 2:n.occ.cov){
       beta_pop[i] ~ dnorm(0, 1)
-      sd_pop[i] ~ dunif(0, 1e2)
+      sd_pop[i-1] ~ dunif(0, 1e2)
       
       for(j in 1:nindividual){
         # add individual heterogeneity
-        beta_ind[j, i] ~ dnorm(beta_pop[i], sd = sd_pop[i])
+        beta_ind[j, i] ~ dnorm(beta_pop[i], sd = sd_pop[i-1])
       }
     }
     # Likelihood
