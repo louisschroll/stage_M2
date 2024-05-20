@@ -26,7 +26,7 @@ make_prediction <- function(mcmc.output, grid, selected_cov, include_intercept=T
   if (class(mcmc.output)=="mcmc"){
     coeff_values <- mcmc.output %>% as_tibble() %>%  select(starts_with("beta")) %>% as.matrix()
   } else {
-    coeff_values <- map(mcmc.output, ~{.x %>% as_tibble() %>%  select(starts_with("beta"))}) %>% 
+    coeff_values <- map(mcmc.output, ~{.x %>% as_tibble() %>% slice_sample(prop = 0.1) %>% select(starts_with("beta"))}) %>% 
       bind_rows() %>% 
       select(-all_of(c(rsf_intercept))) %>% 
       as.matrix()

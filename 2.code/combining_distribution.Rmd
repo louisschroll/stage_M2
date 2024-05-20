@@ -19,42 +19,23 @@ library(sf)
 library(kableExtra)
 
 load(file = paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+load(file = paste0(local_path, "3.results/prediction_grid/grid_nmix_all_sp.RData"))
 load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
 load(file = paste0(local_path, "1.data/wind_farm_boundaries.RData"))
 
-indice_sensibilite_responsabilité <- read_excel(paste0(local_path,"6.source/indice_sensibilite_responsabilité.xlsx"), skip = 1)
-score_df <- indice_sensibilite_responsabilité %>% 
-  mutate(
-    collision_score = Alt * (Man + Ptf + Noc) / 3,
-    collision_summer = collision_score * CS_summer,
-    collision_winter = collision_score * CS_winter,
-    collision_summer_10    = round(collision_summer    / max(collision_summer, na.rm = T)    *10, 2),
-    collision_winter_10    = round(collision_winter    / max(collision_winter, na.rm = T)    *10, 2)) %>% 
-  mutate(
-    displacement_score = (Dis * Spe),
-    displacement_summer = displacement_score * CS_summer,
-    displacement_winter = displacement_score * CS_winter,
-    displacement_summer_10 = round(displacement_summer / max(displacement_summer, na.rm = T) *10, 2),
-    displacement_winter_10 = round(displacement_winter / max(displacement_winter, na.rm = T) *10, 2)
-  ) %>% 
-  mutate(
-    vul_furn = (Alt + Man + Ptf + Noc) * (Dis + Spe) / 8,
-    vul_mean_summer = rowMeans(select(., displacement_summer_10, collision_summer_10)),
-    vul_mean_winter = rowMeans(select(., displacement_winter_10, collision_winter_10)),
-    vul_maxi_summer = pmax(collision_summer_10, displacement_summer_10),
-    vul_maxi_winter = pmax(collision_winter_10, displacement_winter_10),
-    vul_furn_summer = vul_furn * CS_summer,
-    vul_furn_winter = vul_furn * CS_winter,
-    vul_furn_summer = vul_furn_summer / max(vul_furn_summer, na.rm = T) * 10,
-    vul_furn_winter = vul_furn_winter / max(vul_furn_winter, na.rm = T) * 10
-  ) %>% 
-  select(nom_fr, 
-         collision_summer_10, collision_winter_10, 
-         displacement_summer_10, displacement_winter_10,
-         vul_mean_summer, vul_mean_winter,
-         vul_maxi_summer, vul_maxi_winter,
-         vul_furn_summer, vul_furn_winter) 
+wind_farm2 <- wind_farm %>% 
+  mutate(zone_nb = 1:nrow(.)) %>% 
+  mutate(zone_type = case_when(
+    zone_nb %in% 1:3 ~ "Ferme pilote",
+    zone_nb %in% 4:5 ~ "Initial Park Zones",
+    zone_nb %in% 6:7 ~ "Potential zones",
+  )) %>% 
+  filter(!(zone_type == "Ferme pilote")) %>% 
+  mutate(zone_nb = zone_nb - 3)
 
+source(paste0(local_path, "2.code/func_combine_maps.R"))
+
+score_df <- compute_risk_score(file_criteria_value = paste0(local_path,"6.source/indice_sensibilite_responsabilité.xlsx")) 
 
 spOccupancy_res_grid <- spOccupancy_res_grid %>% 
   rename(mean_psi_labbe_HR = mean_psi_labbe,
@@ -62,83 +43,16 @@ spOccupancy_res_grid <- spOccupancy_res_grid %>%
          mean_psi_oceanite_tempete_R = mean_psi_oceanite_tempete,
          sd_psi_oceanite_tempete_R = sd_psi_oceanite_tempete)
 
-compute_vulnerability_gridcell <- function(results_grid, score_df, seasons = "summer", score_colname = "vul_furn_summer"){
-  if (seasons == "summer"){
-    species_names_end = "_R"
-    extract_pattern = "(?<=mean_psi_)(.*?)(?=_R)"
-  } else if (seasons == "winter"){
-    species_names_end = "_HR"
-    extract_pattern = "(?<=mean_psi_)(.*?)(?=_HR)"
-  }
-  mean_psi_df <- results_grid %>% 
-    as_tibble() %>% 
-    select(starts_with("mean_psi")) %>% 
-    select(ends_with(species_names_end)) %>% 
-    mutate(row_id = 1:nrow(.)) %>% 
-    pivot_longer(-row_id, values_to = "mean_psi", names_to = "species_name") %>% 
-    mutate(species_name = str_extract(string = species_name, pattern = extract_pattern)) 
-  
-  species_list <- unique(mean_psi_df$species_name)
-  
-  filtered_score <- score_df %>% filter(nom_fr %in% species_list)
-  species_order <- filtered_score %>% pull(nom_fr)
-  score_matrix <- filtered_score %>% pull(score_colname)
-  
-  mean_psi_matrix <- mean_psi_df %>% 
-    pivot_wider(names_from = species_name, values_from = mean_psi) %>% 
-    select(-row_id) %>% 
-    relocate(all_of(species_order)) %>% 
-    as.matrix()
+grid_risk_occ <- create_grid_risk(grid_result = spOccupancy_res_grid, 
+                          score_df)
 
-  aggregated_value <- mean_psi_matrix %*% score_matrix
+grid_nmix_all_sp <- grid_nmix_all_sp %>% 
+  rename(mean_psi_labbe_HR = mean_psi_labbe,
+         sd_psi_labbe_HR = sd_psi_labbe,
+         mean_psi_oceanite_tempete_R = mean_psi_oceanite_tempete,
+         sd_psi_oceanite_tempete_R = sd_psi_oceanite_tempete)
 
-  return(aggregated_value)
-}
-
-plot_vulnerability_map <- function(grid_synthesis, 
-                               fill_with,
-                               legend_position = "bottom",
-                               plot_title = "",
-                               plot_title_size = 8,
-                               legend_title_size = 9,
-                               axis_text_size = 4,
-                               plot_font = "Arial"){
-  ggplot() +
-    geom_sf(data = grid_synthesis, aes(fill = .data[[fill_with]]), color = NA, lwd = 0) +
-    scale_fill_distiller(palette = "Spectral", 
-                         breaks = c(min(grid_synthesis[[fill_with]]), max(grid_synthesis[[fill_with]])),
-                         labels = c("Low", "High")) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    geom_sf(data = wind_farm, fill = NA, col = "black") +
-    #geom_sf(data = wind_farm, fill = NA, col = "black") +
-    labs(title = plot_title) +
-    theme_bw() +
-    theme(
-      #text = element_text(family = plot_font),
-      legend.position = legend_position,
-      legend.title = element_blank(),
-      plot.title = element_text(hjust = 0.5, 
-                                face = "bold", 
-                                size = plot_title_size),
-      plot.title.position = 'plot',
-      axis.text = element_text(size = axis_text_size)
-      ) +
-    guides(
-      fill = guide_colourbar(
-        title = "Seabirds vulnerability",
-        title.theme = element_text(
-          face = "bold",
-          size = legend_title_size,
-         # family = plot_font,
-          hjust = 0.5),
-        title.position = 'top',
-        ticks = FALSE,
-        title.hjust = .5,
-        barwidth = unit(6, 'lines'),
-        barheight = unit(.4, 'lines'),
-        label.theme = element_text(size = legend_title_size * 0.65)),
-      colour = "none")
-}
+grid_risk_nmix <- create_grid_risk(grid_result = grid_nmix_all_sp, score_df)
 ```
 
 
@@ -228,64 +142,27 @@ score_df %>%
 
 
 ```{r, fig.height=5, fig.width=10}
-grid_synthesis <- spOccupancy_res_grid %>%
-  mutate(
-    collision_summer = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "summer",
-      score_colname = "collision_summer_10"
-    ),
-    collision_winter = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "winter",
-      score_colname = "collision_winter_10"
-    ),
-    displacement_summer = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "summer",
-      score_colname = "displacement_summer_10"
-    ),
-    displacement_winter = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "winter",
-      score_colname = "displacement_winter_10"
-    )) %>% 
-  mutate(
-    collision_all = rowMeans(select(as_tibble(.), 
-                                    collision_summer, 
-                                    collision_winter)),
-    displacement_all = rowMeans(select(as_tibble(.), 
-                                       displacement_summer, 
-                                       displacement_winter))
-  )
-
-
-
-plot_collision_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_collision_summer <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "collision_summer",
                                    plot_title = "Collision risk summer")
 
-plot_collision_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_collision_winter <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "collision_winter",
                                    plot_title = "Collision risk winter")
 
-plot_collision_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_collision_all <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "collision_all",
                                    plot_title = "Collision risk average")
 
-plot_displacement_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_displacement_summer <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "displacement_summer",
                                    plot_title = "Displacement risk summer")
 
-plot_displacement_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_displacement_winter <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "displacement_winter",
                                    plot_title = "Displacement risk winter")
 
-plot_displacement_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
+plot_displacement_all <- plot_vulnerability_map(grid_vulnerability = grid_vulnerability,
                                    fill_with = "displacement_all",
                                    plot_title = "Displacement risk average")
 ```
@@ -310,93 +187,50 @@ plot_displacement_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
 
 
 ```{r, fig.height=10, fig.width=6}
-grid_synthesis <- grid_synthesis %>%
-  mutate(
-    vulnerability_furness_summer = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "summer",
-      score_colname = "vul_furn_summer"
-    ),
-    vulnerability_mean_summer = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "summer",
-      score_colname = "vul_mean_summer"
-    ),
-    vulnerability_max_summer = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "summer",
-      score_colname = "collision_summer_10"
-    ),
-    vulnerability_furness_winter = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "winter",
-      score_colname = "vul_furn_winter"
-    ),
-    vulnerability_mean_winter = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "winter",
-      score_colname = "vul_mean_winter"
-    ),
-    vulnerability_max_winter = compute_vulnerability_gridcell(
-      results_grid = spOccupancy_res_grid,
-      score_df = score_df,
-      seasons = "winter",
-      score_colname = "vul_maxi_winter"
-    )
-  ) %>% 
-  mutate(
-    vulnerability_furness_all = rowMeans(select(as_tibble(.), 
-                                                 vulnerability_furness_summer, 
-                                                 vulnerability_furness_winter)),
-    vulnerability_mean_all = rowMeans(select(as_tibble(.), 
-                                                 vulnerability_mean_summer, 
-                                                 vulnerability_mean_winter)),
-    vulnerability_max_all = rowMeans(select(as_tibble(.), 
-                                                 vulnerability_max_summer, 
-                                                 vulnerability_max_winter)))
+map_vul_summer_occ <- plot_vulnerability_map(grid_vulnerability = grid_risk_occ,
+                                   fill_with = "vulnerability_summer",
+                                   plot_title = "Summer")
+
+map_vul_winter_occ <- plot_vulnerability_map(grid_vulnerability = grid_risk_occ,
+                                   fill_with = "vulnerability_winter",
+                                   plot_title = "Winter")
+
+map_vul_avg_occ <- plot_vulnerability_map(grid_vulnerability = grid_risk_occ,
+                                   fill_with = "vulnerability_average",
+                                   plot_title = "Average")
+
+map_vul_summer_nmix <- plot_vulnerability_map(grid_vulnerability = grid_risk_nmix,
+                                   fill_with = "vulnerability_summer",
+                                   plot_title = "Summer")
+
+map_vul_winter_nmix <- plot_vulnerability_map(grid_vulnerability = grid_risk_nmix,
+                                   fill_with = "vulnerability_winter",
+                                   plot_title = "Winter")
+
+map_vul_avg_nmix <- plot_vulnerability_map(grid_vulnerability = grid_risk_nmix,
+                                   fill_with = "vulnerability_average",
+                                   plot_title = "Average")
 
 
 
-plot_furness_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                   fill_with = "vulnerability_furness_summer",
-                                   plot_title = "Furness formula summer")
-
-plot_mean_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                fill_with = "vulnerability_mean_summer",
-                                plot_title = "Mean value summer")
-
-plot_maxi_summer <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                               fill_with = "vulnerability_max_summer",
-                               plot_title = "Max value summer")
-
-plot_furness_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                   fill_with = "vulnerability_furness_winter",
-                                   plot_title = "Furness formula winter")
-
-plot_mean_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                fill_with = "vulnerability_mean_winter",
-                                plot_title = "Mean value winter")
-
-plot_maxi_winter <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                               fill_with = "vulnerability_max_winter",
-                               plot_title = "Max value winter")
-
-plot_furness_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                   fill_with = "vulnerability_furness_all",
-                                   plot_title = "Furness formula average")
-
-plot_mean_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                                fill_with = "vulnerability_mean_all",
-                                plot_title = "Mean value average")
-
-plot_maxi_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
-                               fill_with = "vulnerability_max_all",
-                               plot_title = "Max value average")
+grid_vulnerability <- grid_risk_nmix %>% 
+  select(starts_with("vulnerability")) %>% 
+  mutate(vulnerability_summer = c(scale(vulnerability_summer)),
+         vulnerability_winter = c(scale(vulnerability_winter)),
+         vulnerability_average = c(scale(vulnerability_average))) %>% 
+  pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
+  mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
+         season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
+  mutate(methods = "N-mixture") %>% 
+  bind_rows(grid_risk_occ %>% 
+              select(starts_with("vulnerability")) %>% 
+              mutate(vulnerability_summer = c(scale(vulnerability_summer)),
+                     vulnerability_winter = c(scale(vulnerability_winter)),
+                     vulnerability_average = c(scale(vulnerability_average))) %>%
+              pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
+              mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
+                     season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
+              mutate(methods = "Occupancy"))
 ```
 
 
@@ -422,181 +256,115 @@ plot_maxi_all <- plot_vulnerability_map(grid_synthesis = grid_synthesis,
 ```
 
 
-```{r}
-library(sf)
-library(rnaturalearth)
-library(ggspatial)
-library(tidyverse)
-library(patchwork)
 
-load("~/stage_M2/1.data/grid.rdata")
-load("~/stage_M2/1.data/all_seabirds_counts.rdata")
-```
-
+# Map comparison of the results for the two methods
 
 ```{r}
-cities = data.frame(nom=c("Montpellier", "Perpignan", "Narbonne", "Marseille"), pays=rep("FR",4))
-print(cities)
+legend_position = "right"
+plot_title = ""
+plot_title_size = 8
+legend_title_size = 9
+axis_text_size = 4
+plot_font = "Arial"
+wind_farm_color <- c("brown", "darkgreen")
 
-library(RJSONIO)
-locateCountry = function(nameCity, codeCountry) {
-  cleanCityName = gsub(' ', '%20', nameCity)
-  url = paste(
-    "http://nominatim.openstreetmap.org/search?city="
-    , cleanCityName
-    , "&countrycodes="
-    , codeCountry
-    , "&limit=9&format=json"
-    , sep="")
-  resOSM = fromJSON(url)
-  if(length(resOSM) > 0) {
-    return(c(resOSM[[1]]$lon, resOSM[[1]]$lat))
-  } else return(rep(NA,2)) 
-}
-
-
-coord = t(apply(cities, 1, function(aRow) locateCountry(aRow[1], aRow[2])))
-cities_sf <- as_tibble(coord) %>% 
-  rename(lat = V1, lon = V2) %>% 
-  bind_cols(cities) %>% 
-  st_as_sf(coords = c("lat", "lon"))
-
-
-
-# https://r-spatial.org/r/2018/10/25/ggplot2-sf.html
-world <- ne_countries(scale = "medium", returnclass = "sf")
-st_crs(cities_sf) <- st_crs(world)
-class(world)
-
-area <- st_crop(
-  x = world,
-  xmin = 2.6,
-  ymin = 42,
-  xmax = 6,
-  ymax = 44
-)
-
-grid2 <- st_transform(grid, st_crs(world))
-
-```
-
-
-```{r}
-france <- st_crop(
-  x = world,
-  xmin = -4.5,
-  ymin = 41,
-  xmax = 8,
-  ymax = 51
-) %>% 
-  filter(sovereignt != "United Kingdom")
-
-rectangle <- st_bbox(grid2) %>% 
-  as_tibble() %>% 
-  mutate(name = c("xmin", "ymin", "xmax", "ymax")) %>% 
-  pivot_wider(values_from = x, names_from = name) %>% 
-  mutate(xmin = xmin - 0.15,
-         xmax = xmax + 0.15,
-         ymax = ymax + 0.15,
-         ymin = ymin - 0.15)
-
-map_france <- ggplot() + geom_sf(data = france, fill= "antiquewhite") +
-  geom_rect(data = rectangle, 
-            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-            fill = NA, color = "red") +
-  theme(panel.background = element_rect(fill = "aliceblue"),
-        panel.grid = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        plot.background = element_blank()) 
-```
+map_risk <- 
+  ggplot() +
+  geom_sf(data = grid_vulnerability, aes(fill = value), color = NA, lwd = 0) +
+  facet_grid(methods ~ factor(season, levels = c("Winter", "Summer", "Average"))) + #, switch = "y"
+    scale_fill_distiller(palette = "Spectral", 
+                         breaks = c(min(grid_vulnerability$value), max(grid_vulnerability$value)),
+                         labels = c("Low", "High")) +
+    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = wind_farm %>% filter(!(zone_type=="Ferme pilote")), 
+            aes(col = as.factor(zone_type)), fill = NA) +
+    geom_sf_text(data = wind_farm2, aes(label = zone_nb, col = as.factor(zone_type)), size = 1.4) +
+    scale_color_manual(values = wind_farm_color) +
+    #geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      #text = element_text(family = plot_font),
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = plot_title_size),
+      plot.title.position = 'plot',
+      axis.title = element_blank(),
+      axis.text = element_text(size = axis_text_size),
+      strip.text = element_text(face = "bold", size = plot_title_size),
+      strip.background = element_rect(fill = "white", linetype = "solid",
+                                      color = "white", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = "black", linewidth = 0.9)
+    ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Seabirds \n vulnerability",
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size * 0.75,
+          # family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        title.hjust = .5,
+        ticks = FALSE,
+        barwidth = unit(.4, 'lines'),
+        barheight = unit(6, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none")
 
 
-```{r}
-city_names <- bind_cols(st_drop_geometry(cities_sf), 
-                        st_coordinates(cities_sf)) %>% 
-  mutate(Y = case_when(nom == "Narbonne" ~ Y - 0.06,
-            TRUE ~ Y + 0.07))
-
-lion_gulf_plot <- ggplot() + 
-  geom_sf(data = grid2, lwd = 0.1, fill = NA) +
-  geom_sf(data = area, fill= "antiquewhite") +
-  geom_text(data=city_names, 
-            aes(x=X, y=Y, label = nom),
-            color = "black", 
-            fontface = "bold", 
-            check_overlap = T,
-            size = 2) +
-  # select an area
-  # add scale (ggspatial package)
-  annotation_scale(location = "br", width_hint = 0.3,
-                   height = unit(0.15, "cm")) +
-  # add noth arrow (ggspatial package)
-  annotation_north_arrow(location = "tr", which_north = "true", 
-                         pad_x = unit(0.25, "cm"), pad_y = unit(0.4, "cm"),
-                         style = north_arrow_fancy_orienteering,
-                         height = unit(1, "cm"),
-                         width = unit(1, "cm")) + 
-  annotate(geom = "text", x = 4.5, y = 42.7, label = "Gulf of Lion", 
-           fontface = "italic", color = "grey22", size = 6) +
-  theme(panel.background = element_rect(fill = "aliceblue"),
-        panel.grid = element_blank(),
-        axis.title = element_blank(),
-        axis.text = element_text(size = 5.5)) +
-  geom_sf(data = cities_sf)
 ```
 
 ```{r}
-plot_effort <- function(data_eff, color, plot_title=""){
-  ggplot() + 
-  geom_sf(data = data_eff %>% st_crop(st_bbox(st_transform(x=area, crs=st_crs(data_eff)))),
-          color = color, linewidth = 0.3)  +
-  geom_sf(data = area, fill= "antiquewhite")  +
-  annotation_scale(location = "br", width_hint = 0.3,
-                   height = unit(0.07, "cm"),
-                   text_cex = 0.4) +
-  theme(panel.background = element_rect(fill = "aliceblue"),
-        panel.grid = element_blank(),
-        axis.text = element_text(size = 4),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5, 
-                                  size = 7, 
-                                  face = "bold")) +
-    labs(title = plot_title)
-}
-p1 <- plot_effort(migralion_eff, 
-                  color = "darkgreen",
-                  plot_title = "Migralion")
-p2 <- plot_effort(pelmed_eff,
-          color = "darkblue",
-                  plot_title = "Pelmed")
+grid_risk_nmix$vul_avg_scaled <- c(scale(grid_risk_nmix$vulnerability_average))
+grid_risk_occ$vul_avg_scaled <- c(scale(grid_risk_occ$vulnerability_average))
 
-p3 <- plot_effort(samm_eff,
-          color = "darkred",
-                  plot_title = "SAMM")
+risk_by_zone <- sapply(st_intersects(wind_farm2, grid_risk_nmix), function(x){grid_risk_nmix$vul_avg_scaled[x]}) %>% 
+  map(~{.x %>% as_tibble()}) %>% 
+  bind_rows(.id = "Zone") %>% 
+  mutate(zone_type = case_when(
+    Zone %in% 1:2 ~ "Initial Park Zones",
+    Zone %in% 3:4 ~ "Potential zones",
+  )) %>% 
+  mutate(method = "N-mixture") %>% 
+  bind_rows(sapply(st_intersects(wind_farm2, grid_risk_occ), function(x){grid_risk_occ$vul_avg_scaled[x]}) %>% 
+  map(~{.x %>% as_tibble()}) %>% 
+  bind_rows(.id = "Zone") %>% 
+  mutate(zone_type = case_when(
+    Zone %in% 1:2 ~ "Initial Park Zones",
+    Zone %in% 3:4 ~ "Potential zones",
+  )) %>% 
+  mutate(method = "Occupancy")) %>% 
+  rename(Vulnerability = value)
 
+boxplot_risk <- ggplot(data = risk_by_zone, aes(x = Zone, y = Vulnerability, color = zone_type)) +
+  geom_boxplot(linewidth = 0.35) +
+  facet_wrap(~method, scales = "fixed") +
+  scale_color_manual(values = wind_farm_color) +
+  geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
+  theme_bw() +
+  theme(legend.position = "right",
+        legend.title = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text = element_text(size = axis_text_size * 1.4),
+        axis.title = element_text(size = axis_text_size * 1.8),
+        legend.text = element_text(size = legend_title_size * 0.75),
+      strip.text = element_text(face = "bold", size = plot_title_size),
+      strip.background = element_rect(fill = "white", linetype = "solid",
+                                      color = "white", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9))
 
-p4 <- plot_effort(pnm_eff,
-          color = "darkorange",
-                  plot_title = "PNM") 
-
-effort_column <- p1 + p2 + p3 + p4 +
-  plot_layout(ncol = 2)
-
-effort_column
 ```
 
 
-```{r}
-(lion_gulf_plot +
-  inset_element(
-    map_france,
-    left = 0,
-    bottom = 0.6,
-    right = 0.4,
-    top = 0.95,
-    align_to = "full"
-  ) |
-  effort_column)
+```{r, fig.width=8, fig.height=6.6}
+map_risk / 
+  (plot_spacer() + boxplot_risk + plot_spacer() +
+     plot_layout(widths = unit(c(3, 12, 3), "cm"))) +
+  plot_layout(heights = unit(c(8, 4), "cm")) +
+  plot_annotation(tag_levels = "A") &
+  theme(title = element_text(hjust = 0.5))
 ```
 

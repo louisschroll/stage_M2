@@ -1,0 +1,190 @@
+---
+title: "fig study area"
+author: "Louis Schroll"
+date: "2024-05-20"
+output: html_document
+---
+
+```{r}
+library(sf)
+library(rnaturalearth)
+library(ggspatial)
+library(tidyverse)
+library(patchwork)
+
+load("~/stage_M2/1.data/grid.rdata")
+load("~/stage_M2/1.data/all_seabirds_counts.rdata")
+```
+
+
+```{r}
+cities = data.frame(nom=c("Montpellier", "Perpignan", "Narbonne", "Marseille"), pays=rep("FR",4))
+print(cities)
+
+library(RJSONIO)
+locateCountry = function(nameCity, codeCountry) {
+  cleanCityName = gsub(' ', '%20', nameCity)
+  url = paste(
+    "http://nominatim.openstreetmap.org/search?city="
+    , cleanCityName
+    , "&countrycodes="
+    , codeCountry
+    , "&limit=9&format=json"
+    , sep="")
+  resOSM = fromJSON(url)
+  if(length(resOSM) > 0) {
+    return(c(resOSM[[1]]$lon, resOSM[[1]]$lat))
+  } else return(rep(NA,2)) 
+}
+
+
+coord = t(apply(cities, 1, function(aRow) locateCountry(aRow[1], aRow[2])))
+cities_sf <- as_tibble(coord) %>% 
+  rename(lat = V1, lon = V2) %>% 
+  bind_cols(cities) %>% 
+  st_as_sf(coords = c("lat", "lon"))
+
+
+
+# https://r-spatial.org/r/2018/10/25/ggplot2-sf.html
+world <- ne_countries(scale = "medium", returnclass = "sf")
+st_crs(cities_sf) <- st_crs(world)
+class(world)
+
+area <- st_crop(
+  x = world,
+  xmin = 2.6,
+  ymin = 42,
+  xmax = 6,
+  ymax = 44
+)
+
+grid2 <- st_transform(grid, st_crs(world))
+
+```
+
+
+```{r}
+france <- st_crop(
+  x = world,
+  xmin = -4.5,
+  ymin = 41,
+  xmax = 8,
+  ymax = 51
+) %>% 
+  filter(sovereignt != "United Kingdom")
+
+rectangle <- st_bbox(grid2) %>% 
+  as_tibble() %>% 
+  mutate(name = c("xmin", "ymin", "xmax", "ymax")) %>% 
+  pivot_wider(values_from = x, names_from = name) %>% 
+  mutate(xmin = xmin - 0.15,
+         xmax = xmax + 0.15,
+         ymax = ymax + 0.15,
+         ymin = ymin - 0.15)
+
+map_france <- ggplot() + geom_sf(data = france, fill= "antiquewhite") +
+  geom_rect(data = rectangle, 
+            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            fill = NA, color = "red") +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.background = element_blank()) 
+```
+
+
+```{r}
+city_names <- bind_cols(st_drop_geometry(cities_sf), 
+                        st_coordinates(cities_sf)) %>% 
+  mutate(Y = case_when(nom == "Narbonne" ~ Y - 0.06,
+            TRUE ~ Y + 0.07))
+
+lion_gulf_plot <- ggplot() + 
+  geom_sf(data = grid2, lwd = 0.1, fill = NA) +
+  geom_sf(data = area, fill= "antiquewhite") +
+  geom_text(data=city_names, 
+            aes(x=X, y=Y, label = nom),
+            color = "black", 
+            fontface = "bold", 
+            check_overlap = T,
+            size = 2) +
+  # select an area
+  # add scale (ggspatial package)
+  annotation_scale(location = "br", width_hint = 0.3,
+                   height = unit(0.15, "cm")) +
+  # add noth arrow (ggspatial package)
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         pad_x = unit(0.25, "cm"), pad_y = unit(0.4, "cm"),
+                         style = north_arrow_fancy_orienteering,
+                         height = unit(1, "cm"),
+                         width = unit(1, "cm")) + 
+  annotate(geom = "text", x = 4.5, y = 42.7, label = "Gulf of Lion", 
+           fontface = "italic", color = "grey22", size = 6) +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 5.5)) +
+  geom_sf(data = cities_sf)
+```
+
+```{r}
+plot_effort <- function(data_eff, color, plot_title=""){
+  ggplot() + 
+  geom_sf(data = data_eff %>% st_crop(st_bbox(st_transform(x=area, crs=st_crs(data_eff)))),
+          color = color, linewidth = 0.3)  +
+  geom_sf(data = area, fill= "antiquewhite")  +
+  annotation_scale(location = "br", width_hint = 0.3,
+                   height = unit(0.07, "cm"),
+                   text_cex = 0.4) +
+  theme(panel.background = element_rect(fill = "aliceblue"),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 4),
+        axis.ticks = element_blank(),
+        plot.title = element_text(hjust = 0.5, 
+                                  size = 7, 
+                                  face = "bold")) +
+    labs(title = plot_title)
+}
+p1 <- plot_effort(migralion_eff, 
+                  color = "darkgreen",
+                  plot_title = "Migralion")
+p2 <- plot_effort(pelmed_eff,
+          color = "darkblue",
+                  plot_title = "Pelmed")
+
+p3 <- plot_effort(samm_eff,
+          color = "darkred",
+                  plot_title = "SAMM")
+
+
+p4 <- plot_effort(pnm_eff,
+          color = "darkorange",
+                  plot_title = "PNM") 
+
+effort_column <- p1 + p2 + p3 + p4 +
+  plot_layout(ncol = 2)
+
+effort_column
+```
+
+
+```{r}
+(lion_gulf_plot +
+  inset_element(
+    map_france,
+    left = 0,
+    bottom = 0.6,
+    right = 0.4,
+    top = 0.95,
+    align_to = "full"
+  ) |
+  effort_column)
+```
+
+
+```{r}
+library(osmdata)
+```
+

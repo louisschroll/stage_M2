@@ -298,6 +298,7 @@ plot_coeff_by_model <- function(coeff_df,
       "N-mixture" = blue,
       "spOccupancy" = orange
     )) +
+    geom_vline(xintercept = 0, color = "grey", linetype = "dashed") +
     theme(
       #text = element_text(family = plot_font),
       axis.text.x = element_text(size = axis_text_size),
@@ -383,10 +384,18 @@ plot_space_use_precision <- function(grid_nmix,
     subtitle = "Predicted CV among grid-cells",
     x = "Coefficient of variation (CV)",
     y = "") +
-  scale_color_manual(
-    values = c("RSF" = red, "Integrated model" = purple, "N-mixture" = blue)) +
-  scale_fill_manual(
-    values = c("RSF" = red, "Integrated model" = purple, "N-mixture" = blue)) +
+    scale_color_manual(
+      values = c( 
+        "RSF" = red,
+        "Integrated model" = purple,
+        "N-mixture" = blue,
+        "spOccupancy" = orange)) +
+    scale_fill_manual(
+      values =  c(
+        "RSF" = red,
+        "Integrated model" = purple,
+        "N-mixture" = blue,
+        "spOccupancy" = orange)) +
   theme(
     #text = element_text(family = plot_font),
     axis.text = element_text(size = axis_text_size),
@@ -409,9 +418,10 @@ plot_coeff_by_model2 <- function(coeff_df,
                                  plot_subtitle = "",
                                  plot_title_size = 10,
                                  axis_text_size = 7,
-                                 plot_font = "Arial"){
+                                 plot_font = "Arial",
+                                 ncol = 1){
   ggplot(coeff_df, aes(value, model, color = model)) +
-    facet_wrap(~covariates, scales = "fixed", ncol = 1) +
+    facet_wrap(~covariates, scales = "fixed", ncol = ncol) +
     ggdist::stat_halfeye(
       adjust = .5,
       width = .6,
@@ -420,8 +430,7 @@ plot_coeff_by_model2 <- function(coeff_df,
       point_colour = NA,
       aes(fill = model)
     ) +
-    geom_boxplot(width = .25,
-                 outlier.shape = NA) +
+    geom_boxplot(width = .25, outlier.shape = NA) +
     labs(
       title = plot_title,
       subtitle = plot_subtitle,
