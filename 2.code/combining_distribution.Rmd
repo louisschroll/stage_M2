@@ -53,6 +53,10 @@ grid_nmix_all_sp <- grid_nmix_all_sp %>%
          sd_psi_oceanite_tempete_R = sd_psi_oceanite_tempete)
 
 grid_risk_nmix <- create_grid_risk(grid_result = grid_nmix_all_sp, score_df)
+
+grid_risk_nmix %>% as_tibble() %>% summary()
+grid_risk_occ %>% as_tibble() %>% summary()
+
 ```
 
 
@@ -211,26 +215,6 @@ map_vul_avg_nmix <- plot_vulnerability_map(grid_vulnerability = grid_risk_nmix,
                                    fill_with = "vulnerability_average",
                                    plot_title = "Average")
 
-
-
-grid_vulnerability <- grid_risk_nmix %>% 
-  select(starts_with("vulnerability")) %>% 
-  mutate(vulnerability_summer = c(scale(vulnerability_summer)),
-         vulnerability_winter = c(scale(vulnerability_winter)),
-         vulnerability_average = c(scale(vulnerability_average))) %>% 
-  pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
-  mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
-         season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
-  mutate(methods = "N-mixture") %>% 
-  bind_rows(grid_risk_occ %>% 
-              select(starts_with("vulnerability")) %>% 
-              mutate(vulnerability_summer = c(scale(vulnerability_summer)),
-                     vulnerability_winter = c(scale(vulnerability_winter)),
-                     vulnerability_average = c(scale(vulnerability_average))) %>%
-              pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
-              mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
-                     season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
-              mutate(methods = "Occupancy"))
 ```
 
 
@@ -260,6 +244,26 @@ grid_vulnerability <- grid_risk_nmix %>%
 # Map comparison of the results for the two methods
 
 ```{r}
+grid_vulnerability <- grid_risk_nmix %>% 
+  select(starts_with("vulnerability")) %>% 
+  mutate(vulnerability_summer = c(scale(vulnerability_summer)),
+         vulnerability_winter = (scale(vulnerability_winter)),
+         vulnerability_average = c(scale(vulnerability_average))) %>%
+  pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
+  mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
+         season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
+  mutate(methods = "N-mixture") %>% 
+  bind_rows(grid_risk_occ %>% 
+              select(starts_with("vulnerability")) %>% 
+              mutate(vulnerability_summer = c(scale(vulnerability_summer)),
+                     vulnerability_winter = (scale(vulnerability_winter)),
+                     vulnerability_average = c(scale(vulnerability_average))) %>%
+              pivot_longer(starts_with("vulnerability"), names_to = "season") %>% 
+              mutate(season = str_replace(string = season, pattern = "(.*?)vulnerability_(.*?)", "\\1"),
+                     season = paste0(toupper(substring(season, 1, 1)), substring(season, 2))) %>% 
+              mutate(methods = "Occupancy"))
+
+
 legend_position = "right"
 plot_title = ""
 plot_title_size = 8
@@ -276,7 +280,7 @@ map_risk <-
                          breaks = c(min(grid_vulnerability$value), max(grid_vulnerability$value)),
                          labels = c("Low", "High")) +
     geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    geom_sf(data = wind_farm %>% filter(!(zone_type=="Ferme pilote")), 
+    geom_sf(data = wind_farm2, 
             aes(col = as.factor(zone_type)), fill = NA) +
     geom_sf_text(data = wind_farm2, aes(label = zone_nb, col = as.factor(zone_type)), size = 1.4) +
     scale_color_manual(values = wind_farm_color) +
@@ -347,14 +351,15 @@ boxplot_risk <- ggplot(data = risk_by_zone, aes(x = Zone, y = Vulnerability, col
   theme_bw() +
   theme(legend.position = "right",
         legend.title = element_blank(),
-        axis.text.y = element_blank(),
+        #axis.text.y = element_blank(),
         axis.text = element_text(size = axis_text_size * 1.4),
         axis.title = element_text(size = axis_text_size * 1.8),
         legend.text = element_text(size = legend_title_size * 0.75),
       strip.text = element_text(face = "bold", size = plot_title_size),
       strip.background = element_rect(fill = "white", linetype = "solid",
                                       color = "white", linewidth = 0.9),
-      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9))
+      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9)) +
+  labs(y = "Relative vulnerability")
 
 ```
 

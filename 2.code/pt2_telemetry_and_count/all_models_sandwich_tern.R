@@ -116,12 +116,12 @@ for (i in seq_along(species_vector)){
   # 3/3 - Integrated RSF and N-mixture
   samplesint <- run_integrated_Nmix_RSF(data_nmix = data_nmix, 
                                         data_rsf = data_rsf, 
+                                        nmix_model = "NB",
                                         n.iter = n.iter, 
                                         n.burnin = n.burnin,
                                         n.chains = n.chains)
   grid_int <- make_prediction(mcmc.output = samplesRSF, 
                               grid = grid, 
-                              nmix_model = "NB",
                               selected_cov = covar, 
                               include_intercept = F, 
                               rsf_intercept = "beta_pop[1]")

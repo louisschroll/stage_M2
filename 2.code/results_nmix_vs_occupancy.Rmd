@@ -25,6 +25,8 @@ local_path <- "~/stage_M2/"
 load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
 load(paste0(local_path, "1.data/grid_cells.rdata"))
 load(paste0(local_path, "1.data/RSF_data_scopoli_shearwaters.rdata"))
+load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
+load(file = paste0(local_path, "1.data/wind_farm_boundaries.RData"))
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 
 # load functions
@@ -74,6 +76,7 @@ obs_data <- bind_rows(migralion_obs %>% mutate(data_source = "migralion"),
 change_covariate_names <- function(coeff_df){
   coeff_df %>% 
     mutate(covariates = case_when(covariates == "dist_to_shore" ~ "Distance to coast",
+                                  covariates == "log_dist_to_shore" ~ "Distance to coast (log)",
                                   covariates == "log_bathymetry" ~ "Bathymetry (log)",
                                   covariates == "bathymetry" ~ "Bathymetry",
                                   covariates == "mean_ssh" ~ "Sea surface height",
@@ -104,7 +107,7 @@ plot_results_occ_and_nmix <- function(species){
   names(grid_occupancy) <- c("mean_psi", "sd_psi", "grid_c")
   occupancy_plot <- plot_occupancy(grid_occupancy = grid_occupancy, plot_title = "spOccupancy")
   
-  grid_nmix <- make_prediction(samplesNmixture, grid = grid, selected_cov = selected_cov)
+  load(paste0(local_path, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
   plots_nmix <- plot_prediction(grid_nmix, plot_title = "N-mixture")
   
   plot_data_occ <- ggplot() +

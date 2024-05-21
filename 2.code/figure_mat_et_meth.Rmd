@@ -6,15 +6,163 @@ output: html_document
 ---
 
 ```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+library(osmdata)
+library(elevatr)
+library(ggspatial)
+library(ggrepel)
+library(leaflet)
+library(plotly)
+
+# gp_osmdata_l7 <- opq(bbox = c(xmin = 2.6,
+#                               ymin = 42,
+#                               xmax = 6,
+#                               ymax = 44)) %>%
+#   add_osm_feature(key="admin_level", value="2") %>% # 
+#   osmdata_sf()
+# 
+# gp_gtbt_lim_sf <- gp_osmdata_l7$osm_multipolygons %>%
+#   dplyr::select(name) %>%
+#   arrange(name) %>%
+#   st_make_valid()
+# 
+# plot(gp_gtbt_lim_sf, key.width=lcm(4))
+# 
+# 
+# area <- st_crop(
+#   gdlmap %>% select(geometry, NAME),
+#   xmin = 6e+05,
+#   ymin = 6015601,
+#   xmax = 1e+06,
+#   ymax = 6350000
+# )
+# 
+# plot(area)
+# 
+# gp_elev_raster <- get_elev_raster(locations = area,
+#                                   z = 12,
+#                                   clip = "locations",
+#                                   src="aws"
+# ) %>%
+#   rast() %>% 
+#   # ramener les valeurs négatives à zéro
+#   app(fun=function(x){ x[x < 0] <- 0; return(x)})
+# 
+# 
+# plot(gp_elev_raster, col=terrain.colors(n=40))
+# 
+# gp_ombr_raster <- shade(terrain(gp_elev_raster, v='slope')/180*pi,
+#                         terrain(gp_elev_raster, v='aspect')/180*pi,
+#                         angle=40, direction=330
+# )
+# 
+# plot(gp_ombr_raster, col=grey(0:100/100))
+# 
+# gp_elev_raster_2 <- aggregate(gp_elev_raster, fact=2)
+# gp_ombr_raster_2 <- aggregate(gp_ombr_raster, fact=2)
+# 
+# ggplot() +
+#   layer_spatial(gp_elev_raster_2) +
+#   scale_fill_gradientn(colors=terrain.colors(n=40), na.value = 0) +
+#   theme_bw()
+# 
+# elevation_gdl_raster <- gp_elev_raster_2
+# save(elevation_gdl_raster, file = "~/stage_M2/1.data/elevation_gdl_raster.RData")
+
+load(file = "~/stage_M2/1.data/elevation_gdl_raster.RData")
+```
+
+```{r}
+# city_names <- bind_cols(st_drop_geometry(cities_sf), 
+#                         st_coordinates(cities_sf)) %>% 
+#   mutate(Y = case_when(nom == "Narbonne" ~ Y - 0.06,
+#             TRUE ~ Y + 0.07))
+# 
+# lion_gulf_plot <- ggplot() + 
+#   geom_sf(data = grid2, lwd = 0.1, fill = NA) +
+#   geom_sf(data = area, fill= "antiquewhite") +
+#   geom_text(data=city_names, 
+#             aes(x=X, y=Y, label = nom),
+#             color = "black", 
+#             fontface = "bold", 
+#             check_overlap = T,
+#             size = 2) +
+#   # select an area
+#   # add scale (ggspatial package)
+#   annotation_scale(location = "br", width_hint = 0.3,
+#                    height = unit(0.15, "cm")) +
+#   # add noth arrow (ggspatial package)
+#   annotation_north_arrow(location = "tr", which_north = "true", 
+#                          pad_x = unit(0.25, "cm"), pad_y = unit(0.4, "cm"),
+#                          style = north_arrow_fancy_orienteering,
+#                          height = unit(1, "cm"),
+#                          width = unit(1, "cm")) + 
+#   annotate(geom = "text", x = 4.5, y = 42.7, label = "Gulf of Lion", 
+#            fontface = "italic", color = "grey22", size = 6) +
+#   theme(panel.background = element_rect(fill = "aliceblue"),
+#         panel.grid = element_blank(),
+#         axis.title = element_blank(),
+#         axis.text = element_text(size = 5.5)) +
+#   geom_sf(data = cities_sf)
+
+# Load grid
+load("~/stage_M2/1.data/grid.rdata")
+
+# Load depth layer
+depth_raster <- rast(paste0(local_path, "1.data/static_covariates_raster.tif"))
+plot(depth_raster$bathymetry)
+
+crs(depth_raster)
+depth_tibble <- crds(depth_raster) %>% bind_cols(as_tibble(depth_raster))
+
+crs(elevation_gdl_raster) <- crs(gdlmap)
+# Make the plot
+ggplot() +
+  layer_spatial(elevation_gdl_raster) +
+  scale_fill_gradientn(colors=terrain.colors(n=40), na.value = 0) +
+  geom_sf(data = grid, lwd = 0.1, fill = NA) +
+  geom_raster(data = depth_tibble, aes(x=x, y = y, fill = bathymetry)) +
+  scale_fill_distiller() +
+  theme_bw()
+```
+
+
+```{r}
 library(sf)
 library(rnaturalearth)
 library(ggspatial)
 library(tidyverse)
 library(patchwork)
 
-load("~/stage_M2/1.data/grid.rdata")
+local_path <- "~/stage_M2/"
+
 load("~/stage_M2/1.data/all_seabirds_counts.rdata")
+load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
+
+library(terra)
+study_area <- ext(3, 5.6, 42.25, 43.7)
+altitude_raster <- rast(paste0(local_path, "europeelevation.eps.75dpi.tif")) %>% 
+  terra::crop(study_area) 
+plot(altitude_raster$europeelevation.eps.75dpi_1)
+
+altitude_raster <- get_elev_raster(contour_golfe, z=3)
+plot(altitude_raster)
+
+
+
+contour_golfe2 <- st_transform(contour_golfe, crs = 4326)
+tibble_altitude <- crds(alt) %>% bind_cols(as_tibble(alt))
+ggplot() +
+  geom_raster(data = depth_tibble, aes(x=x, y = y, fill = bathymetry)) +
+  scale_fill_distiller() +
+  geom_sf(data = contour_golfe2)
+
+alt <- get_elev_raster(depth_raster, z=3)
+plot(alt)
 ```
+
 
 
 ```{r}

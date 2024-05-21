@@ -40,8 +40,8 @@ run_Nmixture <- function(data_nmix,
       # State process
       for(i in 1:nsites_total){
         log(lambda[i]) <- sum(beta[1:n.occ.cov] * XN[i,1:n.occ.cov])
-        succprob <- kappa / (kappa + lambda[i])
-        N[i] ~ dnegbin(prob = succprob, size = kappa)
+        succprob[i] <- kappa / (kappa + lambda[i])
+        N[i] ~ dnegbin(prob = succprob[i], size = kappa)
       }
       
       # Observation process

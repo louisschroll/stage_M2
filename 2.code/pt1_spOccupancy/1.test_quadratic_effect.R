@@ -35,10 +35,18 @@ load(paste0(adress, "1.data/grid.rdata"))
 # Function to test quadratic and log effects
 test_quad_and_log <- function(data.int, species){
   
-  cov_list <- as.list(c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST", 
-                        "mean_autumn_SST", "mean_SST", "sd_SST", "concavity", 
-                        "dist_to_shore", "bathymetry",
-                        "mean_CHL", "mean_SSH", "sd_SSH", "sd_VEL"))
+  cov_list <- as.list(c("mean_winter_SST", 
+                        "mean_spring_SST", 
+                        "mean_summer_SST", 
+                        "mean_autumn_SST", 
+                        "sd_SST", 
+                        "dist_to_shore", 
+                        "bathymetry",
+                        "mean_CHL", 
+                        "mean_SSH", 
+                        "sd_SSH", 
+                        "sd_SAL",
+                        "sd_VEL"))
 
   models_to_test <- map(cov_list, 
                         function(x) list(x,  c(x, paste0("I(",x,")^2")), paste0("log_",x)))
@@ -64,12 +72,12 @@ test_quad_and_log <- function(data.int, species){
 }
 
 # Get species names
-# species_list <- migralion_obs %>%
-#   filter(!is.na(species_name)) %>%
-#   pull(species_name) %>%
-#   unique() %>% 
-#   str_subset("macareux", negate = F)
-species_list <- c("labbe", "macareux_moine_HR")
+species_list <- migralion_obs %>%
+  filter(!is.na(species_name)) %>%
+  pull(species_name) %>%
+  unique() # %>%
+  #str_subset("macareux", negate = F)
+
 # Write data in a list
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),

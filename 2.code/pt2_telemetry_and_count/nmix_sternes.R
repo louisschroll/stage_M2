@@ -51,7 +51,7 @@ best_cov <- list(
 )
 
 # Run the model and save the results
-n.iter = 50000
+n.iter = 100000
 n.burnin = 0.1 * n.iter
 n.chains = 3
 
@@ -72,7 +72,7 @@ for (i in seq_along(species_vector)){
   save(samplesNmixture, file = paste0(adress, "3.results/mcmc_outputs/Nmix_output_", species, ".rdata"))
   
   ## predict and save prediction as a sf object in a .rdata
-  grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov)
+  grid_nmix <- make_prediction(samplesNmixture, grid, selected_cov=covar)
   save(grid_nmix, file = paste0(adress, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
 }
 

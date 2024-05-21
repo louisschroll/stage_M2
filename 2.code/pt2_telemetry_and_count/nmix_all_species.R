@@ -74,7 +74,7 @@ best_covs <- list(
 )
 
 
-n.iter = 300000
+n.iter = 100000
 n.burnin = 0.1 * n.iter
 n.chains = 3
 

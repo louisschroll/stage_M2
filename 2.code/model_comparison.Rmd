@@ -80,7 +80,7 @@ selected_cov <- best_cov[[species]]
 samples_spOcc <- model_result$beta.samples
 
 # Load predictions
-load(file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata")) #grid_nmix, grid_RSF, grid_int
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata")) #grid_nmix, grid_RSF, grid_int
 ```
 
 

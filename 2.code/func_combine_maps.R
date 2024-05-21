@@ -135,11 +135,10 @@ compute_risk_col <- function(results_grid,
     relocate(all_of(species_order)) %>%
     as.matrix()
   
-  risk_column <- c(mean_psi_matrix %*% score_matrix)
+  risk_column <- c(mean_psi_matrix %*% score_matrix) / sum(score_matrix)
   
   return(risk_column)
 }
-
 
 
 
