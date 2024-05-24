@@ -27,6 +27,11 @@
 #   st_crop(st_bbox(grid)) %>%
 #   select(geometry)
 
+library(extrafont)
+gdl_elev_raster <- terra::rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
+contour_gdl_elev <- gdl_elev_raster %>% 
+  terra::crop(st_bbox(contour_golfe))
+
 plot_prediction <- function(new_grid,
                             add_colonies = F,
                             species_colony = NULL,
@@ -35,45 +40,49 @@ plot_prediction <- function(new_grid,
                             plot_title_size = 10,
                             legend_title_size = 9,
                             axis_text_size = 6,
-                            plot_font = "Arial") {
-    
-  # Plot the intensity of space use
-  mean_psi_plot <- ggplot() +
-    geom_sf(data = new_grid, aes(fill = mean_psi), color = NA, lwd = 0) +
-    scale_fill_viridis_c(breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
-                         labels = c("Low", "High")) +
-    # scale_fill_distiller(palette = "Spectral", 
-    #                      breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
-    #                      labels = c("Low", "High")) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    #geom_sf(data = wind_farm, fill = NA, col = "black") +
-    labs(title = plot_title) +
-    theme_bw() +
+                            remove_x_axis = F,
+                            plot_font = "Calibri") {
+  
+  map_theme <- theme_bw() +
     theme(
-      #text = element_text(family = plot_font),
+      text = element_text(family = plot_font),
       legend.position = legend_position,
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5, 
                                 face = "bold", 
-                                size = plot_title_size),
+                                size = plot_title_size,
+                                family = plot_font,
+                                margin = margin(0,0,0,0)),
       plot.title.position = 'plot',
-      axis.text = element_text(size = axis_text_size)
-      ) +
-    guides(
-      fill = guide_colourbar(
-        title = "Relative space-use",
-        title.theme = element_text(
-          face = "bold",
-          size = legend_title_size,
-         # family = plot_font,
-          hjust = 0.5),
-        title.position = 'top',
-        ticks = FALSE,
-        title.hjust = .5,
-        barwidth = unit(6, 'lines'),
-        barheight = unit(.4, 'lines'),
-        label.theme = element_text(size = legend_title_size * 0.65)),
-      colour = "none")
+      axis.text = element_text(size = axis_text_size),
+      axis.line = element_blank(),
+      plot.margin = unit(c(0, 0, 0, 0), "pt"),
+      panel.border = element_blank()
+    ) 
+  
+  # Plot the intensity of space use
+  mean_psi_plot <- 
+    ggplot() +
+    geom_sf(data = new_grid, aes(fill = mean_psi), color = NA, lwd = 0) +
+    scale_fill_viridis_c(breaks = c(min(new_grid$mean_psi), max(new_grid$mean_psi)),
+                         labels = c("Low", "High"),
+                         guide = guide_colourbar(
+                           title = "Relative space-use",
+                           title.theme = element_text(
+                             face = "bold",
+                             size = legend_title_size,
+                             family = plot_font,
+                             hjust = 0.5),
+                           title.position = 'top',
+                           ticks = FALSE,
+                           title.hjust = .5,
+                           barwidth = unit(6, 'lines'),
+                           barheight = unit(.4, 'lines'),
+                           label.theme = element_text(size = legend_title_size * 0.65))) +
+    geom_sf(data = contour_golfe, color = "lightgrey", fill = "lightgrey") +
+    #geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    map_theme
   
   if (add_colonies) {
     mean_psi_plot <- mean_psi_plot +
@@ -88,23 +97,15 @@ plot_prediction <- function(new_grid,
                          breaks = c(min(new_grid$sd_psi), max(new_grid$sd_psi)),
                          labels = c("Low", "High")
                          ) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
+    geom_sf(data = contour_golfe, color = "lightgrey", fill = "lightgrey") +
     labs(title = plot_title) +
-    theme_bw() +
-    theme(#text = element_text(family = plot_font),
-          legend.position = legend_position,
-          legend.title = element_blank(),
-          plot.title = element_text(hjust = 0.5, 
-                                    face = "bold", 
-                                    size = plot_title_size),
-          axis.text = element_text(size = axis_text_size)) +
     guides(
       fill = guide_colourbar(
         title = "Standard deviation",
         title.theme = element_text(
           face = "bold",
           size = legend_title_size,
-          # family = plot_font,
+           family = plot_font,
           hjust = 0.5),
         title.position = 'top',
         ticks = FALSE,
@@ -112,7 +113,20 @@ plot_prediction <- function(new_grid,
         barwidth = unit(6, 'lines'),
         barheight = unit(.4, 'lines'),
         label.theme = element_text(size = legend_title_size * 0.65)),
-      colour = "none")
+      colour = "none") +
+    map_theme +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  
+  if (remove_x_axis){
+    mean_psi_plot <- mean_psi_plot +
+      theme(axis.text.x = element_blank(),
+            axis.ticks.x = element_blank())
+    
+    sd_psi_plot <- sd_psi_plot +
+      theme(axis.text.x = element_blank(),
+            axis.ticks.x = element_blank())
+  }
 
   return(list(mean_psi_plot = mean_psi_plot, sd_psi_plot = sd_psi_plot))
 }
@@ -361,7 +375,7 @@ plot_space_use_precision <- function(grid_nmix,
                                      plot_title_size = 10,
                                      plot_subtitle_size = 7,
                                      axis_text_size = 8,
-                                     plot_font = "Arial"){
+                                     plot_font = "Calibri"){
   tibble(value = grid_nmix$sd_psi, model = "N-mixture") %>%
   bind_rows(tibble(value = grid_RSF$sd_psi, model = "RSF"),
             tibble(value = grid_int$sd_psi, model = "Integrated model"),
@@ -381,8 +395,8 @@ plot_space_use_precision <- function(grid_nmix,
   theme_minimal() +
   labs(
     title = "Space-use precision",
-    subtitle = "Predicted CV among grid-cells",
-    x = "Coefficient of variation (CV)",
+    subtitle = "Standard deviation of prediction among grid-cells",
+    x = "Standard deviation (SD)",
     y = "") +
     scale_color_manual(
       values = c( 
@@ -397,7 +411,7 @@ plot_space_use_precision <- function(grid_nmix,
         "N-mixture" = blue,
         "spOccupancy" = orange)) +
   theme(
-    #text = element_text(family = plot_font),
+    text = element_text(family = plot_font),
     axis.text = element_text(size = axis_text_size),
     axis.title = element_text(size = axis_text_size),
     plot.title = element_text(
@@ -408,13 +422,13 @@ plot_space_use_precision <- function(grid_nmix,
                                  size = plot_subtitle_size),
     legend.position = "top",
     legend.title = element_blank()) +
-  guides(color = "none", fill = "none")
+  guides(color = "none", fill = "none") 
   }
 
 
 
 plot_coeff_by_model2 <- function(coeff_df, 
-                                 plot_title = "", 
+                                 plot_title = "B", 
                                  plot_subtitle = "",
                                  plot_title_size = 10,
                                  axis_text_size = 7,
@@ -452,21 +466,21 @@ plot_coeff_by_model2 <- function(coeff_df,
     )) +
     geom_vline(xintercept = 0, color = "grey", linetype = "dashed") +
     theme(
-      #text = element_text(family = plot_font),
+      text = element_text(family = plot_font),
       axis.text.x = element_text(size = axis_text_size),
       axis.text.y = element_blank(),
       plot.title = element_text(
         size = plot_title_size,
         face = "bold",
-        hjust = 0.5
+        hjust = 0
       ),
       plot.subtitle = element_text(hjust = 0.5, size = 8),
       legend.position = "bottom",
       legend.title = element_blank(),
       strip.text = element_text(face = "bold", size = plot_title_size),
       strip.background = element_rect(fill = "white", linetype = "solid",
-                                      color = "black", linewidth = 0.9),
-      panel.background = element_rect(fill = "transparent", color = "black", linewidth = 0.9)
+                                      color = "white", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9)
     ) +
     guides(
       color = guide_legend(
@@ -474,7 +488,7 @@ plot_coeff_by_model2 <- function(coeff_df,
         keywidth = unit(1, "pt"),
         nrow = 1
       ),
-      fill = "none"
-    )
-  
+      fill = "none",
+    ) +
+    xlim(-(coeff_df$value %>% abs() %>% max()), (coeff_df$value %>% abs() %>% max()))
 }

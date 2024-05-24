@@ -1,0 +1,103 @@
+---
+title: "Untitled"
+author: "Louis Schroll"
+date: "2024-05-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+
+
+species_vect <- c("sterne_pierregarin_R",
+                  "oceanite_tempete",
+                  "labbe",
+                  "mouette_melanocephale_R",
+                  "mouette_melanocephale_HR",
+                  "macareux_moine_HR",
+                  "fou_de_bassan_HR",
+                  "mouette_pygmee_HR",
+                  "mouette_rieuse_HR"
+)
+
+title_list <- list(
+  oceanite_tempete = "Storm petrel (summer)",
+  labbe = "Small skuas (summer)",
+  sterne_pierregarin_R = "Common tern (summer)",
+  mouette_melanocephale_R ="Mediterranean gull (summer)",
+  mouette_melanocephale_HR = "Mediterranean gull (winter)",
+  macareux_moine_HR = "Atlantic puffin (winter)",
+  fou_de_bassan_HR = "Northern gannet (winter)",
+  mouette_pygmee_HR = "Little gull (winter)",
+  mouette_rieuse_HR = "Black-headed gull (winter)"
+)
+
+is_x_remove = c(rep(TRUE, length(species_vect)-1), rep(FALSE, 1))
+
+plots_nmix_list <- list()
+plots_occ_list <- list()
+
+#sf_long_format <- NULL
+
+for (i in seq_along(species_vect)){
+  species <- species_vect[i]
+  load(file = paste0(local_path, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
+  plots_nmix_list[[i]] <- plot_prediction(grid_nmix, 
+                                          plot_title = title_list[[species]],
+                                          remove_x_axis = is_x_remove[i])
+  
+  grid_occ <- spOccupancy_res_grid %>% 
+    select(all_of(c("grid_c", paste0(c("mean_psi_", "sd_psi_"), species))))
+  names(grid_occ) <- c("mean_psi", "sd_psi", "grid_c")
+  plots_occ_list[[i]] <- plot_prediction(grid_occ, 
+                                          plot_title = title_list[[species]],
+                                          remove_x_axis = is_x_remove[i])
+  
+  # sf_long_format <- sf_long_format %>% 
+  #   bind_rows(grid_nmix %>% select(mean_psi, sd_psi) %>% mutate(species_name = title_list[[species]],
+  #                                                               model = "N-mixture")) %>% 
+  #   bind_rows(grid_occ %>% select(mean_psi, sd_psi) %>% mutate(species_name = title_list[[species]],
+                                                              # model = "Occupancy"))
+}
+
+megaplot_summer <- plots_nmix_list[[1]][[1]] + plots_nmix_list[[1]][[2]] +
+  plots_occ_list[[1]][[1]] + plots_occ_list[[1]][[2]]
+for (i in 2:4){
+  megaplot_summer <- megaplot_summer + plots_nmix_list[[i]][[1]] + plots_nmix_list[[i]][[2]] +
+    plots_occ_list[[i]][[1]] + plots_occ_list[[i]][[2]]
+}
+```
+
+
+```{r, fig.height=10, fig.width=10}
+megaplot_summer + 
+  plot_layout(guides = "collect", ncol = 4) +
+  plot_annotation(theme = theme(legend.position = "bottom",
+                                plot.title = element_text(face = "bold",
+                                                     family = plot_font,
+                                                     hjust = 0.5)),
+                  title = "Seabirds distribution in the Gulf of Lion")
+```
+
+
+```{r, fig.height=10, fig.width=10}
+megaplot_winter <- plots_nmix_list[[5]][[1]] + plots_nmix_list[[5]][[2]] +
+  plots_occ_list[[5]][[1]] + plots_occ_list[[5]][[2]]
+for (i in 6:length(species_vect)){
+  megaplot_winter <- megaplot_winter + plots_nmix_list[[i]][[1]] + plots_nmix_list[[i]][[2]] +
+    plots_occ_list[[i]][[1]] + plots_occ_list[[i]][[2]]
+}
+
+megaplot_winter + 
+  plot_layout(guides = "collect", ncol = 4) +
+  plot_annotation(theme = theme(legend.position = "bottom",
+                                plot.title = element_text(face = "bold",
+                                                     family = plot_font,
+                                                     hjust = 0.5)),
+                  title = "Seabirds distribution in the Gulf of Lion during winter")
+```
+

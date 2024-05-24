@@ -77,7 +77,7 @@ species_list <- migralion_obs %>%
   pull(species_name) %>%
   unique() # %>%
   #str_subset("macareux", negate = F)
-
+species_list <-species_list[8:17]
 # Write data in a list
 data_list = list(pelmed = list(obs = pelmed_obs, eff = pelmed_eff),
                  samm = list(obs = samm_obs, eff = samm_eff),

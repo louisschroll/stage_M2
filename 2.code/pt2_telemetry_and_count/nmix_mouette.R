@@ -39,9 +39,11 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Select the species
-species_vector <- c("mouette_melanocephale_HR", 
-                    "mouette_melanocephale_R",
-                    "mouette_pygmee_HR")
+species_vector <- c("petit_puffin_HR",
+                    "petit_puffin_R")
+  # c("mouette_melanocephale_HR", 
+  #                   "mouette_melanocephale_R",
+  #                   "mouette_pygmee_HR")
 
 # Indicate the covar to use
 best_cov <- list(
@@ -50,7 +52,11 @@ best_cov <- list(
   
   mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_CHL", "sd_SAL", "mean_SSH", "log_sd_VEL", "mean_autumn_SST", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
-  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST")
+  mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST"),
+  petit_puffin_HR = c("log_dist_to_shore", "log_bathymetry", 'mean_CHL', "sd_SAL", "mean_SSH"),
+  petit_puffin_R = c("mean_CHL", "mean_SSH"),
+  
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH")
 )
 
 # Run the model and save the results

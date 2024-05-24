@@ -118,7 +118,7 @@ best_static_covs <- list(
   goeland_leucophee_R = c("log_dist_to_shore"),
   
   mouette_melanocephale_HR = c("dist_to_shore"),
-  mouette_melanocephale_R = c("log_bathymetry"),
+  mouette_melanocephale_summer = c("log_bathymetry", "mean_SSH"),
   
   mouette_pygmee_HR = c("log_dist_to_shore", "log_bathymetry"),
   
@@ -132,13 +132,13 @@ best_static_covs <- list(
   puffin_de_scopoli_R = c("log_bathymetry"),
   
   sterne_caugek_HR = c("log_dist_to_shore", "log_bathymetry"),
-  sterne_caugek_R = c("log_bathymetry"),
+  sterne_caugek_summer = c("log_bathymetry", "log_dist_to_shore", "sd_SSH"),
   
-  sterne_pierregarin_R = c("log_bathymetry"),
+  sterne_pierregarin_summer = c("log_bathymetry", "sd_SSH"),
   
   macareux_moine_HR = c("log_dist_to_shore", "mean_SSH"),
   
-  labbe = c("mean_SSH", "sd_SSH")
+  labbe_summer = c("mean_SSH", "sd_SSH")
   )
 
 best_SST_covs <- list(
@@ -148,7 +148,7 @@ best_SST_covs <- list(
   goeland_leucophee_R = c("mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
   
   mouette_melanocephale_HR = c("mean_winter_SST", "mean_autumn_SST"),
-  mouette_melanocephale_R = c("mean_autumn_SST"),
+  mouette_melanocephale_summer = c("mean_autumn_SST"),
   
   mouette_pygmee_HR = c("mean_autumn_SST", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
@@ -162,13 +162,13 @@ best_SST_covs <- list(
   puffin_de_scopoli_R = c("mean_winter_SST", "mean_spring_SST"), #"I(mean_winter_SST)^2",),
   
   sterne_caugek_HR = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
-  sterne_caugek_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_summer = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   
-  sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"), 
+  sterne_pierregarin_summer = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"), 
   
   macareux_moine_HR = c("mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
   
-  labbe = c("mean_autumn_SST", "mean_winter_SST")
+  labbe_summer = c("mean_autumn_SST", "mean_winter_SST")
   )
 
 best_dyn_covs <- list(
@@ -178,7 +178,7 @@ best_dyn_covs <- list(
   goeland_leucophee_R = c("mean_CHL", "log_sd_SSH"),
   
   mouette_melanocephale_HR = c("mean_CHL", "sd_SAL"),
-  mouette_melanocephale_R = c("log_mean_CHL", "mean_SSH"),
+  mouette_melanocephale_summer = c("log_mean_CHL"),
   
   mouette_pygmee_HR = c("mean_CHL", "sd_SAL", "mean_SSH", "log_sd_VEL"),
   
@@ -192,15 +192,15 @@ best_dyn_covs <- list(
   puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH"),
   
   sterne_caugek_HR = c("mean_CHL", "mean_SSH"),
-  sterne_caugek_R = c("mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  sterne_caugek_summer = c("mean_CHL", "sd_SAL", "log_sd_VEL"),
   
   sterne_pierregarin_R = c("mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   
-  sterne_pierregarin_R = c("mean_CHL", "mean_SSH", "log_sd_VEL"),
+  sterne_pierregarin_summer = c("mean_CHL", "log_sd_VEL"),
   
   macareux_moine_HR = c("mean_CHL"),
   
-  labbe = c("sd_SAL")
+  labbe_summer = c("sd_SAL")
   )
 
 for (species in species_list){

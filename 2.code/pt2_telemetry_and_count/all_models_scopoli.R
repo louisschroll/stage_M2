@@ -59,17 +59,17 @@ for (i in seq_along(species_vector)){
   species <- species_vector[i]
   covar <- best_cov[[species]]
   # 1/3 - N-mixture 
-  data_nmix <- prepare_data_Nmix(data_list = data_list,
-                                 grid = grid,
-                                 species = species,
-                                 selected_cov = covar)
-  samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
-                                  n.iter = n.iter,
-                                  n.burnin = n.burnin,
-                                  n.chains = n.chains)
-  grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
-                               grid = grid, 
-                               selected_cov = covar)
+  # data_nmix <- prepare_data_Nmix(data_list = data_list,
+  #                                grid = grid,
+  #                                species = species,
+  #                                selected_cov = covar)
+  # samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
+  #                                 n.iter = n.iter,
+  #                                 n.burnin = n.burnin,
+  #                                 n.chains = n.chains)
+  # grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
+  #                              grid = grid, 
+  #                              selected_cov = covar)
   
   # 2/3 - RSF 
   load(paste0(adress, file_rsf_data[[species]]))
@@ -85,24 +85,29 @@ for (i in seq_along(species_vector)){
                               include_intercept = F, 
                               rsf_intercept = "beta_pop[1]")
   
+  save(samplesRSF, 
+       file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_RSF_", species, ".rdata"))
+  save(grid_RSF,
+       file = paste0(adress, "3.results/prediction_grid/grid_RSF_", species, ".rdata"))
+  
   # 3/3 - Integrated RSF and N-mixture
-  samplesint <- run_integrated_Nmix_RSF(data_nmix = data_nmix, 
-                                        data_rsf = data_rsf,
-                                        nmix_model = "NB",
-                                        n.iter = n.iter, 
-                                        n.burnin = n.burnin,
-                                        n.chains = n.chains)
-  grid_int <- make_prediction(mcmc.output = samplesRSF, 
-                              grid = grid, 
-                              selected_cov = covar, 
-                              include_intercept = F, 
-                              rsf_intercept = "beta_pop[1]")
+  # samplesint <- run_integrated_Nmix_RSF(data_nmix = data_nmix, 
+  #                                       data_rsf = data_rsf,
+  #                                       nmix_model = "NB",
+  #                                       n.iter = n.iter, 
+  #                                       n.burnin = n.burnin,
+  #                                       n.chains = n.chains)
+  # grid_int <- make_prediction(mcmc.output = samplesRSF, 
+  #                             grid = grid, 
+  #                             selected_cov = covar, 
+  #                             include_intercept = F, 
+  #                             rsf_intercept = "beta_pop[1]")
   
   # Save everything
-  save(samplesNmixture, samplesRSF, samplesint, 
-       file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
-  save(grid_nmix, grid_RSF, grid_int,
-       file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
+  # save(samplesNmixture, samplesRSF, samplesint, 
+  #      file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
+  # save(grid_nmix, grid_RSF, grid_int,
+  #      file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
 }
 
 

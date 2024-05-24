@@ -88,6 +88,7 @@ change_covariate_names <- function(coeff_df){
                                   covariates == "mean_spring_sst" ~ "Spring SST",
                                   covariates == "log_sd_vel" ~ "Current velocity variability (log)",
                                   covariates == "mean_chl" ~ "Chlorophyl A",
+                                  covariates == "log_mean_CHL" ~ "Chlorophyl A (log)",
                                   covariates == "mean_summer_sst" ~ "Summer SST",
                                   covariates == "mean_winter_sst" ~ "Winter SST"))
 }

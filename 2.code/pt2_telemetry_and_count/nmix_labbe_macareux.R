@@ -39,11 +39,15 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Select the species
-species_vector <- c("labbe", 
-                    "macareux_moine_HR")
+species_vector <- c("goeland_leucophee_HR", "goeland_leucophee_R")
+  
+ # c("labbe", "macareux_moine_HR")
 
 # Indicate the covar to use
 best_cov <- list(
+  goeland_leucophee_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", 
+                           "mean_spring_SST", "mean_summer_SST", "mean_autumn_SST"),
+  goeland_leucophee_R = c("log_dist_to_shore", "mean_winter_SST", "mean_summer_SST", "mean_autumn_SST"),
   labbe = c("mean_SSH", "sd_SSH", "sd_SAL", "mean_autumn_SST", "mean_winter_SST"),
   macareux_moine_HR = c("log_dist_to_shore", "mean_SSH", "mean_autumn_SST", "mean_CHL")
 )

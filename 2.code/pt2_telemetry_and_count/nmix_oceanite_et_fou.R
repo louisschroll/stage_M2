@@ -39,13 +39,15 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Select the species
-species_vector <- c("fou_de_bassan_HR", 
-                    "oceanite_tempete")
+species_vector <- c("puffin_de_scopoli_R")
+  # "fou_de_bassan_HR", 
+  #                   "oceanite_tempete")
 
 # Indicate the covar to use
 best_cov <- list(
   fou_de_bassan_HR = c("dist_to_shore", "log_bathymetry"),
-  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL")
+  oceanite_tempete = c("dist_to_shore", "log_bathymetry", "sd_SAL", "sd_SSH", "log_sd_VEL"),
+  puffin_de_scopoli_R = c("log_mean_CHL", "sd_SAL", "mean_SSH", "sd_SSH")
 )
 
 # Run the model and save the results

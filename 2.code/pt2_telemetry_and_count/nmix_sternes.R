@@ -39,13 +39,15 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Select the species
-species_vector <- c("sterne_pierregarin_R",
-                    "mouette_rieuse_HR")
+species_vector <- c("sterne_caugek_HR",
+                    "sterne_caugek_R")
+  # "sterne_pierregarin_R",
+  #                   "mouette_rieuse_HR")
 
 # Indicate the covar to use
 best_cov <- list(
-  sterne_caugek_winter = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
-  sterne_caugek_summer = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
+  sterne_caugek_HR = c("mean_CHL", "mean_SSH", "mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
+  sterne_caugek_R = c("log_bathymetry", "mean_CHL", "mean_SSH", "sd_SSH", "log_sd_VEL"),
   sterne_pierregarin_R = c("mean_winter_SST", "mean_spring_SST", "mean_summer_SST"),
   mouette_rieuse_HR = c("log_dist_to_shore", "log_bathymetry", "mean_winter_SST", "mean_autumn_SST")
 )

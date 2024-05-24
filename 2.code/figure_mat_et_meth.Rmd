@@ -23,7 +23,7 @@ library(patchwork)
 local_path <- "~/stage_M2/"
 load(file = paste0(local_path, "1.data/grid.rdata"))
 load(file = paste0(local_path, "1.data/wind_farm_boundaries2.RData")) # wind farm
-load(file = "~/stage_M2/1.data/elevation_gdl_raster.RData")
+
 load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
 load(file = paste0(local_path, "1.data/all_seabirds_counts.rdata"))
 

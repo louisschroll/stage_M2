@@ -93,7 +93,7 @@ run_int_model <- function(data.int, selected_cov, add_spatial=FALSE, spatial_mod
                        alpha.normal = list(mean = as.list(rep(0, nb_datasets)), 
                                            var = as.list(rep(2.72, nb_datasets))))
     
-    n.samples <- 15000
+    n.samples <- 10000
     n.burn <- 0.1 * n.samples
     n.thin <- 1
     
@@ -169,9 +169,9 @@ run_non_int_model <- function(data, selected_cov){
   total_sites_nb <- nrow(data$occ.covs)
   det.formula <- ~ scale(transect_length) + session
   
-  n.samples <- 15000
+  n.samples <- 10000
   n.burn <- 0.1 * n.samples
-  n.thin <- 3
+  n.thin <- 1
     
   data <- list(y = data$y[[1]], 
                  occ.covs = data$occ.covs,
