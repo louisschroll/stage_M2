@@ -190,13 +190,13 @@ corrplot::corrplot.mixed(combined_rasters3 %>% as_tibble() %>% cor(method = "pea
 
 # Add the log values
 log_raster <- log(combined_rasters3)
-log_raster$concavity <- combined_rasters3$concavity
+#log_raster$concavity <- combined_rasters3$concavity
 log_raster$mean_SSH <- combined_rasters3$mean_SSH
 log_raster$bathymetry <- log(-combined_rasters3$bathymetry)
 names(log_raster) <- paste0("log_", names(log_raster))
 
 
-final_raster <- c(log_raster,combined_rasters3) %>% scale()
+final_raster <- c(log_raster, combined_rasters3) %>% scale()
 plot(final_raster)
 
 # save 

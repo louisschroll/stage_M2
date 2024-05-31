@@ -91,27 +91,27 @@ for (i in seq_along(species_vector)){
                                  grid = grid,
                                  species = species,
                                  selected_cov = covar)
-  samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
-                                  n.iter = n.iter,
-                                  n.burnin = n.burnin,
-                                  n.chains = n.chains)
-  grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
-                               grid = grid, 
-                               selected_cov = covar)
+  # samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
+  #                                 n.iter = n.iter,
+  #                                 n.burnin = n.burnin,
+  #                                 n.chains = n.chains)
+  # grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
+  #                              grid = grid, 
+  #                              selected_cov = covar)
 
   # 2/3 - RSF 
   load(paste0(adress, file_rsf_data[[species]]))
   data_rsf <- format_rsf_data_for_nimble(df_RSF %>% filter(month %in% month_to_keep[[species]]), 
                                          covar)
-  samplesRSF <- run_RSF(data_rsf, 
-                        n.iter = n.iter, 
-                        n.burnin=n.burnin, 
-                        n.chains=n.chains)
-  grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
-                              grid, 
-                              selected_cov = covar, 
-                              include_intercept = F, 
-                              rsf_intercept = "beta_pop[1]")
+  # samplesRSF <- run_RSF(data_rsf, 
+  #                       n.iter = n.iter, 
+  #                       n.burnin=n.burnin, 
+  #                       n.chains=n.chains)
+  # grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
+  #                             grid, 
+  #                             selected_cov = covar, 
+  #                             include_intercept = F, 
+  #                             rsf_intercept = "beta_pop[1]")
 
   # 3/3 - Integrated RSF and N-mixture
   samplesint <- run_integrated_Nmix_RSF(data_nmix = data_nmix, 
@@ -120,16 +120,21 @@ for (i in seq_along(species_vector)){
                                         n.iter = n.iter, 
                                         n.burnin = n.burnin,
                                         n.chains = n.chains)
-  grid_int <- make_prediction(mcmc.output = samplesRSF, 
+  save(samplesint, 
+       file = paste0(adress, "3.results/mcmc_outputs/int_output_", species, ".rdata"))
+  
+  grid_int <- make_prediction(mcmc.output = samplesint, 
                               grid = grid, 
                               selected_cov = covar, 
                               include_intercept = F, 
-                              rsf_intercept = "beta_pop[1]")
+                              rsf_intercept = c("beta_pop[1]", "beta0_nmix"))
+  save(grid_int,
+       file = paste0(adress, "3.results/prediction_grid/grid_int_", species, ".rdata"))
   
   # Save everything
-  save(samplesNmixture, samplesRSF, samplesint, 
-       file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
-  save(grid_nmix, grid_RSF, grid_int,
-       file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
+  # save(samplesNmixture, samplesRSF, samplesint, 
+  #      file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
+  # save(grid_nmix, grid_RSF, grid_int,
+  #      file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
 }
 

@@ -36,12 +36,15 @@ compute_risk_score <- function(file_criteria_value){
       # using the max btw displacement and collision
       vul_maxi_summer = pmax(collision_summer, displacement_summer),
       vul_maxi_winter = pmax(collision_winter, displacement_winter),
+      vulnerability_summer = vul_maxi_summer / max(vul_maxi_summer, na.rm = T) * 10,
+      vulnerability_winter = vul_maxi_winter / max(vul_maxi_winter, na.rm = T) * 10,
       # using the formula from Furness et al., 2013 (I keep only this score)
       vul_furn = (Alt + Man + Ptf + Noc) * (Dis + Spe) / 8,
       vul_furn_summer = vul_furn * CS_summer,
       vul_furn_winter = vul_furn * CS_winter,
-      vulnerability_summer = vul_furn_summer / max(vul_furn_summer, na.rm = T) * 10,
-      vulnerability_winter = vul_furn_winter / max(vul_furn_winter, na.rm = T) * 10
+      
+      # vulnerability_summer = vul_furn_summer / max(vul_furn_summer, na.rm = T) * 10,
+      # vulnerability_winter = vul_furn_winter / max(vul_furn_winter, na.rm = T) * 10
     ) %>% 
     select(nom_fr, 
            collision_summer, collision_winter, 

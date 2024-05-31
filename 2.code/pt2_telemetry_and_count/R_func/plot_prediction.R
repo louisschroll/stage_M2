@@ -27,10 +27,10 @@
 #   st_crop(st_bbox(grid)) %>%
 #   select(geometry)
 
-library(extrafont)
-gdl_elev_raster <- terra::rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
-contour_gdl_elev <- gdl_elev_raster %>% 
-  terra::crop(st_bbox(contour_golfe))
+# library(extrafont)
+# gdl_elev_raster <- terra::rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
+# contour_gdl_elev <- gdl_elev_raster %>% 
+#   terra::crop(st_bbox(contour_golfe))
 
 plot_prediction <- function(new_grid,
                             add_colonies = F,
@@ -262,7 +262,7 @@ gather_coeff_values <- function(sampleNmixture = NULL, samplesRSF = NULL, sample
     samplesint %>%
       select_coeff_cols(
         covariate_names = c("intercept_Nmix", "intercept_RSF", selected_cov),
-        model_name = "Integrated model"
+        model_name = "RSF + Nmixture"
       ),
     
     samples_spOcc %>% as_tibble() %>%
@@ -302,13 +302,13 @@ plot_coeff_by_model <- function(coeff_df,
     theme_minimal() +
     scale_color_manual(values = c(
       "RSF" = red,
-      "Integrated model" = purple,
+      "RSF + Nmixture" = purple,
       "N-mixture" = blue,
       "spOccupancy" = orange
     )) +
     scale_fill_manual(values = c(
       "RSF" = red,
-      "Integrated model" = purple,
+      "RSF + Nmixture" = purple,
       "N-mixture" = blue,
       "spOccupancy" = orange
     )) +
@@ -378,7 +378,7 @@ plot_space_use_precision <- function(grid_nmix,
                                      plot_font = "Calibri"){
   tibble(value = grid_nmix$sd_psi, model = "N-mixture") %>%
   bind_rows(tibble(value = grid_RSF$sd_psi, model = "RSF"),
-            tibble(value = grid_int$sd_psi, model = "Integrated model"),
+            tibble(value = grid_int$sd_psi, model = "RSF + Nmixture"),
             tibble(value = grid_spOcc$sd_psi, model = "spOccupancy")) %>%
   ggplot(aes(x = value, y = model, color = as.factor(model))) +
   ggdist::stat_halfeye(
@@ -401,13 +401,13 @@ plot_space_use_precision <- function(grid_nmix,
     scale_color_manual(
       values = c( 
         "RSF" = red,
-        "Integrated model" = purple,
+        "RSF + Nmixture" = purple,
         "N-mixture" = blue,
         "spOccupancy" = orange)) +
     scale_fill_manual(
       values =  c(
         "RSF" = red,
-        "Integrated model" = purple,
+        "RSF + Nmixture" = purple,
         "N-mixture" = blue,
         "spOccupancy" = orange)) +
   theme(
@@ -454,13 +454,13 @@ plot_coeff_by_model2 <- function(coeff_df,
     theme_minimal() +
     scale_color_manual(values = c(
       "RSF" = red,
-      "Integrated model" = purple,
+      "RSF + Nmixture" = purple,
       "N-mixture" = blue,
       "spOccupancy" = orange
     )) +
     scale_fill_manual(values = c(
       "RSF" = red,
-      "Integrated model" = purple,
+      "RSF + Nmixture" = purple,
       "N-mixture" = blue,
       "spOccupancy" = orange
     )) +

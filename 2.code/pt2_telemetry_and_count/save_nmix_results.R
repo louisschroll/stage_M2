@@ -50,31 +50,8 @@ species_nmix <- c(
   "mouette_rieuse_HR",
   "oceanite_tempete",
   "sterne_pierregarin_R",
-  #"macareux_moine_HR",
-  "labbe"
-)
-
-path_nmix <- paste0(local_path, 
-                    "3.results/mcmc_outputs/Nmix_output_", 
-                    species_nmix, 
-                    ".rdata")
-
-for (i in seq_along(species_nmix)){
-  species <- species_nmix[i]
-  print(species)
-  load(path_nmix[i])
-  grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
-                           grid = grid, 
-                           selected_cov = best_covs[[species]]) %>% 
-    select(mean_psi, sd_psi) %>% 
-    mutate(mean_psi = mean_psi / max(mean_psi))
-  
-  grid_nmix_all_sp[[paste0("mean_psi_", species)]] <- grid_nmix$mean_psi
-  grid_nmix_all_sp[[paste0("sd_psi_", species)]] <- grid_nmix$sd_psi
-}
-
-
-species_integre <- c(
+  "macareux_moine_HR",
+  "labbe",
   "goeland_leucophee_HR",
   "goeland_leucophee_R",
   "petit_puffin_HR",
@@ -84,24 +61,23 @@ species_integre <- c(
   "sterne_caugek_R"
 )
 
-path_modelint <- paste0(local_path, 
-                        "3.results/mcmc_outputs/mcmc_output_", 
-                        species_integre, 
-                        ".rdata")
+path_nmix <- paste0(local_path, 
+                    "3.results/prediction_grid/grid_Nmix_", 
+                    species_nmix, 
+                    ".rdata")
 
-
-for (i in seq_along(species_integre)){
-  species <- species_integre[i]
-  load(path_modelint[i])
-  grid_int <- make_prediction(samplesint, 
-                              grid, 
-                              selected_cov = best_covs[[species]], 
-                              rsf_intercept = "beta_pop[1]") %>% 
+for (i in seq_along(species_nmix)){
+  species <- species_nmix[i]
+  print(species)
+  load(path_nmix[i])
+  grid_nmix <- grid_nmix %>% 
     select(mean_psi, sd_psi) %>% 
-    mutate(mean_psi = mean_psi / max(mean_psi))
+    mutate(mean_psi = log(exp(mean_psi)+1))
   
-  grid_nmix_all_sp[[paste0("mean_psi_", species)]] <- grid_int$mean_psi
-  grid_nmix_all_sp[[paste0("sd_psi_", species)]] <- grid_int$sd_psi
+  grid_nmix_all_sp[[paste0("mean_psi_", species)]] <- grid_nmix$mean_psi
+  grid_nmix_all_sp[[paste0("sd_psi_", species)]] <- grid_nmix$sd_psi
 }
 
-save(grid_nmix_all_sp, file = paste0(adress, "3.results/prediction_grid/grid_nmix_all_sp.RData"))
+
+
+save(grid_nmix_all_sp, file = paste0(local_path, "3.results/prediction_grid/grid_nmix_all_sp.RData"))

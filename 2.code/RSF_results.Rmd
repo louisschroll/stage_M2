@@ -25,6 +25,7 @@ load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
 load(paste0(local_path, "1.data/grid_cells.rdata"))
 load(paste0(local_path, "1.data/RSF_data_scopoli_shearwaters.rdata"))
 load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
+load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
 
 # load functions
 path_to_Rfunc <- paste0(local_path, "2.code/pt2_telemetry_and_count/R_func")
@@ -90,11 +91,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
-                            grid, 
-                            selected_cov, 
-                            include_intercept = F, 
-                            rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -142,7 +139,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -189,7 +186,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -231,7 +228,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -273,7 +270,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -315,7 +312,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -354,7 +351,7 @@ load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata")
 selected_cov <- best_cov[[species]]
 
 # Make predictions
-grid_RSF <- make_prediction(samplesRSF, grid, selected_cov, include_intercept = F, rsf_intercept = "beta_pop[1]")
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
 plots_rsf <- plot_prediction(grid_RSF, plot_title = "RSF")
 plots_rsf_mean <- plots_rsf$mean_psi_plot
@@ -378,7 +375,7 @@ df_RSF %>%
   select(all_of(selected_cov), case) %>% 
   pivot_longer(-case, names_to = "cov") %>% 
   ggplot(aes(y=value, x = as.factor(case))) +
-  facet_wrap(~~factor(cov, levels=selected_cov)) +
+  facet_wrap(~factor(cov, levels=selected_cov)) +
   geom_boxplot()
 
 MCMCvis::MCMCplot(samplesRSF, params = "beta_pop")
