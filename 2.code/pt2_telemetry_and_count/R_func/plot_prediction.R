@@ -27,10 +27,10 @@
 #   st_crop(st_bbox(grid)) %>%
 #   select(geometry)
 
-library(extrafont)
-gdl_elev_raster <- terra::rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
-contour_gdl_elev <- gdl_elev_raster %>% 
-  terra::crop(st_bbox(contour_golfe))
+# library(extrafont)
+# gdl_elev_raster <- terra::rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
+# contour_gdl_elev <- gdl_elev_raster %>% 
+#   terra::crop(st_bbox(contour_golfe))
 
 plot_prediction <- function(new_grid,
                             add_colonies = F,

@@ -102,6 +102,11 @@ samples_spOcc <- model_result$beta.samples
 
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata")) #grid_nmix, grid_RSF, grid_int
+
+load("~/stage_M2/3.results/mcmc_outputs/int_outputpuffin_de_scopoli_R.rdata")
+load("~/stage_M2/3.results/mcmc_outputs/RSF_output_puffin_de_scopoli_R.rdata")
+load("~/stage_M2/3.results/prediction_grid/grid_INT_puffin_de_scopoli_R.rdata")
+load("~/stage_M2/3.results/prediction_grid/grid_RSF_puffin_de_scopoli_R.rdata")
 ```
 
 
@@ -128,8 +133,8 @@ plots_int <- plot_prediction(grid_int,
 
 ```{r figure scopoli, fig.width=10, fig.height=10}
 predictive_maps <- (plots_spOccupancy$mean_psi_plot + plots_spOccupancy$sd_psi_plot) /
-  (plots_rsf_mean + plots_rsf$sd_psi_plot) /
   (plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot) /
+  (plots_rsf_mean + plots_rsf$sd_psi_plot) /
   (plots_int$mean_psi_plot + plots_int$sd_psi_plot) +
   plot_layout(guides = "collect") +
   plot_annotation(
@@ -138,6 +143,9 @@ predictive_maps <- (plots_spOccupancy$mean_psi_plot + plots_spOccupancy$sd_psi_p
       legend.spacing.x = unit(3, "cm")
     )
   ) 
+
+predictive_maps <- wrap_elements(predictive_maps)
+
 coeff_df <- gather_coeff_values(sampleNmixture, 
                                 samplesRSF, 
                                 samplesint, 
@@ -164,21 +172,21 @@ chl_plot <- plot_coeff_by_model(coeff_df,
                                 plot_title = "Chlorophyl A", 
                                 plot_subtitle = "(log)")
 
-coefficient_plot <- (sd_ssh_plot + sal_plot + mean_ssh_plot + chl_plot) +
-  plot_layout(guides = "collect", tag_level = "new") + 
+coefficient_plot <- wrap_elements((sd_ssh_plot + sal_plot + mean_ssh_plot + chl_plot) +
+  plot_layout(guides = "collect") + 
   plot_annotation(
     theme = theme(
       legend.position = "bottom",
       legend.text = element_text(
-        #family  = "Arial",
+        family  = "Calibri",
         face = "bold",
         size = 9
-      )))
+      ))))
 
-precision_plot <- plot_space_use_precision(grid_nmix = grid_nmix, 
+precision_plot <- wrap_elements(plot_space_use_precision(grid_nmix = grid_nmix, 
                          grid_RSF = grid_RSF, 
                          grid_int = grid_int, 
-                         grid_spOcc = grid_scopoli)
+                         grid_spOcc = grid_scopoli))
 
 plot_left <- (coefficient_plot / precision_plot) +
   plot_layout(heights = c(7, 4))
@@ -189,6 +197,7 @@ plot_left <- (coefficient_plot / precision_plot) +
   ) +
   plot_annotation(
     title = "Scopoli shearwater space-use",
+    tag_levels = "A",
     #caption = 'Source: Migralion project & PELMED 2017-2021',
     theme = theme(
       plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
