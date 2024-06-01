@@ -17,12 +17,14 @@ library(tidyverse, warn.conflicts = FALSE)
 library(sf)
 library(nimble, warn.conflicts = FALSE)
 library(patchwork)
-# library(extrafont)
+library(extrafont)
 
 local_path <- "~/stage_M2/"
 # load functions
 path_to_Rfunc <- paste0(local_path, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
+
+source(paste0(local_path, "2.code/4_figure_rapport/make_fig_comparison.R"))
 
 # load data
 load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
@@ -219,6 +221,8 @@ samples_spOcc <- model_result$beta.samples
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+load("~/stage_M2/3.results/prediction_grid/grid_int_sterne_caugek_R.rdata")
+load("~/stage_M2/3.results/mcmc_outputs/int_output_sterne_caugek_R.rdata")
 
 make_fig_comparison(species,
                     fig_title = "Sandwich tern space-use (Summer)",
@@ -247,6 +251,8 @@ samples_spOcc <- model_result$beta.samples
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+load("~/stage_M2/3.results/mcmc_outputs/int_output_sterne_caugek_HR.rdata")
+load("~/stage_M2/3.results/prediction_grid/grid_int_sterne_caugek_HR.rdata")
 
 make_fig_comparison(species,
                     fig_title = "Sandwich tern space-use (Winter)",
@@ -275,9 +281,13 @@ samples_spOcc <- model_result$beta.samples
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+
+load("~/stage_M2/3.results/prediction_grid/grid_goeland_leucophee_R2.rdata")
+load("~/stage_M2/3.results/mcmc_outputs/int_output_goeland_leucophee_R.rdata")
 
 make_fig_comparison(species,
-                    fig_title = "Sandwich tern space-use (Winter)",
+                    fig_title = "Yellow-legged gull space-use (Summer)",
                     best_cov = best_cov)
 ```
 
@@ -300,10 +310,30 @@ samples_spOcc <- model_result$beta.samples
 load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+load(paste0(local_path, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
+
+
+load("~/stage_M2/3.results/prediction_grid/grid_goeland_leucophee_HR2.rdata")
+load("~/stage_M2/3.results/mcmc_outputs/int_output_goeland_leucophee_HR.rdata")
 
 make_fig_comparison(species,
                     fig_title = "Yellow-legged gull space-use (Winter)",
                     best_cov = best_cov)
+```
+
+```{r, fig.width=10, fig.height=5}
+grid_occ <- spOccupancy_res_grid %>% 
+    select(all_of(c("grid_c", paste0(c("mean_psi_", "sd_psi_"), species))))
+  names(grid_occ) <- c("mean_psi", "sd_psi", "grid_c")
+  
+map_leucophee_winter <- plot_maps_by_models_2col(species = species, 
+                                         grid_occ = grid_occ, 
+                                         grid_nmix = grid_nmix, 
+                                         grid_RSF = grid_RSF, 
+                                         grid_int = grid_int,
+                                         title = "Yellow-legged gull (winter)") 
+
+map_leucophee_winter
 ```
 
 
@@ -320,24 +350,65 @@ load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 # Load predictions
 load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
 
+load("~/stage_M2/3.results/mcmc_outputs/int_output_petit_puffin_R.rdata")
+load("~/stage_M2/3.results/prediction_grid/grid_int_petit_puffin_R.rdata")
+
 make_fig_comparison(species,
                     fig_title = "Small shearwater space-use (Summer)",
                     best_cov = best_cov)
 ```
 
+```{r, fig.width=10, fig.height=5}
+grid_occ <- spOccupancy_res_grid %>% 
+    select(all_of(c("grid_c", paste0(c("mean_psi_", "sd_psi_"), species))))
+  names(grid_occ) <- c("mean_psi", "sd_psi", "grid_c")
+  
+map_yelkouan_summer <- plot_maps_by_models_2col(species = species, 
+                                         grid_occ = grid_occ, 
+                                         grid_nmix = grid_nmix, 
+                                         grid_RSF = grid_RSF, 
+                                         grid_int = grid_int,
+                                         title = "Small shearwaters (Summer)") 
 
-```{r figure scopoli, fig.width=10, fig.height=10}
-load(paste0(local_path, "1.data/RSF_data_yellow_legged_gull.rdata"))
-df_RSF <- df_RSF %>% filter(month %in% c(1:3, 9:12))
-plots_rsf_mean +
-  (ggplot() + geom_point(data = df_RSF %>% filter(case==1), aes(x=X, y=Y), alpha = 0.1) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    theme_bw())
+map_yelkouan_summer
 ```
+
+
 
 ## Hors repro
 ```{r figure leucoph_winter, fig.width=10, fig.height=10}
 species <- "petit_puffin_HR"
+
+load(paste0(local_path, "3.results/mcmc_outputs/mcmc_output_", species,".rdata"))
+load(paste0(local_path, "3.results/spOccupancy_outputs/spOccupancy_", species,".RData"))
+samples_spOcc <- model_result$beta.samples
+load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+# Load predictions
+load(file = paste0(local_path, "3.results/prediction_grid/grid_", species, ".rdata"))
+
+load("~/stage_M2/3.results/mcmc_outputs/int_output_petit_puffin_HR.rdata")
+load("~/stage_M2/3.results/prediction_grid/grid_int_petit_puffin_HR.rdata")
+
 make_fig_comparison(species,
-                    fig_title = "Small shearwater space-use (Winter)")
+                    fig_title = "Small shearwater space-use (Winter)",
+                    best_cov = best_cov)
 ```
+
+
+```{r, fig.width=10, fig.height=5}
+grid_occ <- spOccupancy_res_grid %>% 
+    select(all_of(c("grid_c", paste0(c("mean_psi_", "sd_psi_"), species))))
+  names(grid_occ) <- c("mean_psi", "sd_psi", "grid_c")
+  
+map_yelkouan_winter <- plot_maps_by_models_2col(species = species, 
+                                         grid_occ = grid_occ, 
+                                         grid_nmix = grid_nmix, 
+                                         grid_RSF = grid_RSF, 
+                                         grid_int = grid_int,
+                                         title = "Small shearwaters (Winter)") 
+
+map_yelkouan_winter
+```
+
+
+

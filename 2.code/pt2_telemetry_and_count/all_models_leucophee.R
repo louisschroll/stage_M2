@@ -30,7 +30,7 @@ path_to_Rfunc <- paste0(adress, "2.code/pt2_telemetry_and_count/R_func")
 sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
 
 # Prepare data
-species_vector <- c("goeland_leucophee_R") #"goeland_leucophee_HR", 
+species_vector <- c("goeland_leucophee_R") #"goeland_leucophee_HR"
 
 data_list <- list(pelmed = list(obs_data = pelmed_obs, effort_data = pelmed_eff),
                   migralion = list(obs_data = migralion_obs, effort_data = migralion_eff),
@@ -67,27 +67,28 @@ for (i in seq_along(species_vector)){
                                  grid = grid,
                                  species = species,
                                  selected_cov = covar)
-  samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
-                                  n.iter = n.iter,
-                                  n.burnin = n.burnin,
-                                  n.chains = n.chains)
-  grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
-                               grid = grid, 
-                               selected_cov = covar)
-  
+  # samplesNmixture <- run_Nmixture(data_nmix = data_nmix,
+  #                                 n.iter = n.iter,
+  #                                 n.burnin = n.burnin,
+  #                                 n.chains = n.chains, 
+  #                                 compute_pvalues = T)
+  # grid_nmix <- make_prediction(mcmc.output = samplesNmixture, 
+  #                              grid = grid, 
+  #                              selected_cov = covar)
+   
   # 2/3 - RSF 
   load(paste0(adress, file_rsf_data[[species]]))
   data_rsf <- format_rsf_data_for_nimble(df_RSF %>% filter(month %in% month_to_keep[[species]]), 
-                                         covar)
-  samplesRSF <- run_RSF(data_rsf, 
-                        n.iter = n.iter, 
-                        n.burnin=n.burnin, 
-                        n.chains=n.chains)
-  grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
-                              grid, 
-                              selected_cov = covar, 
-                              include_intercept = F, 
-                              rsf_intercept = "beta_pop[1]")
+                                        covar)
+  # samplesRSF <- run_RSF(data_rsf, 
+  #                       n.iter = n.iter, 
+  #                       n.burnin=n.burnin, 
+  #                       n.chains=n.chains)
+  # grid_RSF <- make_prediction(mcmc.output = samplesRSF, 
+  #                             grid, 
+  #                             selected_cov = covar, 
+  #                             include_intercept = F, 
+  #                             rsf_intercept = "beta_pop[1]")
   
   # 3/3 - Integrated RSF and N-mixture
   samplesint <- run_integrated_Nmix_RSF(data_nmix = data_nmix, 
@@ -96,16 +97,21 @@ for (i in seq_along(species_vector)){
                                         n.iter = n.iter, 
                                         n.burnin = n.burnin,
                                         n.chains = n.chains)
-  grid_int <- make_prediction(mcmc.output = samplesRSF, 
+  save(samplesint, 
+       file = paste0(adress, "3.results/mcmc_outputs/int_output_", species, ".rdata"))
+  
+  grid_int <- make_prediction(mcmc.output = samplesint, 
                               grid = grid, 
                               selected_cov = covar, 
                               include_intercept = F, 
-                              rsf_intercept = "beta_pop[1]")
+                              rsf_intercept = c("beta_pop[1]", "beta0_nmix"))
+  save(grid_int,
+       file = paste0(adress, "3.results/prediction_grid/grid_", species, "2.rdata"))
   
   # Save everything
-  save(samplesNmixture, samplesRSF, samplesint, 
-       file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
-  save(grid_nmix, grid_RSF, grid_int,
-       file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
+  # save(samplesNmixture, samplesRSF, samplesint, 
+  #      file = paste0(adress, "3.results/mcmc_outputs/mcmc_output_", species, ".rdata"))
+  # save(grid_nmix, grid_RSF, grid_int,
+  #      file = paste0(adress, "3.results/prediction_grid/grid_", species, ".rdata"))
 }
 

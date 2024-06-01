@@ -57,12 +57,12 @@ plot_maps_by_models <- function(species, grid_occ, grid_nmix, grid_RSF, grid_int
                                plot_title = "RSF")
   # 3/3 - RSF & N-mixture
   plots_int <- plot_prediction(grid_int, 
-                               plot_title = "Integrated model")
+                               plot_title = "RSF + N-mixture")
   
   predictive_maps <- 
     (plots_occ$mean_psi_plot + plots_occ$sd_psi_plot) /
-    (plots_rsf$mean_psi_plot + plots_rsf$sd_psi_plot) /
     (plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot) /
+    (plots_rsf$mean_psi_plot + plots_rsf$sd_psi_plot) /
     (plots_int$mean_psi_plot + plots_int$sd_psi_plot) +
     plot_layout(guides = "collect", nrow = 4) +
     plot_annotation(
@@ -71,6 +71,44 @@ plot_maps_by_models <- function(species, grid_occ, grid_nmix, grid_RSF, grid_int
         legend.spacing.x = unit(3, "cm")
       )
     )
+  
+  return(predictive_maps)
+}
+
+
+
+plot_maps_by_models_2col <- function(species, grid_occ, grid_nmix, grid_RSF, grid_int, title=""){
+  # Plot all the maps
+  # 0/3 spOccupancy 
+  plots_occ <- plot_prediction(grid_occ, 
+                               plot_title = "Occupancy")
+  # 1/3 - N-mixture
+  plots_nmix <- plot_prediction(grid_nmix, 
+                                plot_title = "N-mixture")
+  # 2/3 - RSF
+  plots_rsf <- plot_prediction(grid_RSF, 
+                               plot_title = "RSF")
+  # 3/3 - RSF & N-mixture
+  plots_int <- plot_prediction(grid_int, 
+                               plot_title = "RSF + N-mixture")
+  
+  predictive_maps <- 
+    ((plots_occ$mean_psi_plot + plots_occ$sd_psi_plot) |
+    (plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot)) /
+    ((plots_rsf$mean_psi_plot + plots_rsf$sd_psi_plot) |
+    (plots_int$mean_psi_plot + plots_int$sd_psi_plot)) +
+    plot_layout(guides = "collect", nrow = 2) +
+    plot_annotation(
+      title = title,
+      theme = theme(
+        plot.title = element_text(
+          hjust = 0.5,
+          face = "bold",
+          family = "Calibri"),
+        legend.position = "bottom", 
+        legend.spacing.x = unit(3, "cm")
+      )
+    ) 
   
   return(predictive_maps)
 }

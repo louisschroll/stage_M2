@@ -30,7 +30,6 @@ make_prediction <- function(mcmc.output, grid, selected_cov, include_intercept=T
       bind_rows() %>% 
       select(-all_of(c(rsf_intercept))) %>% 
       as.matrix()
-      
   }
   
   # Get covariates values within each cells of grid

@@ -5,7 +5,8 @@ run_integrated_Nmix_RSF <- function(data_nmix,
                                     nmix_model = "Poisson",
                                     n.iter = 100000, 
                                     n.burnin = 10000,
-                                    n.chains = 3) {
+                                    n.chains = 3,
+                                    n.thin = 1) {
   
   # Combine data in list (data, inits and constants)
   # INITS
@@ -102,8 +103,8 @@ run_integrated_Nmix_RSF <- function(data_nmix,
       ### State process
       for(i in 1:nsites_total){
         log(lambda[i]) <- beta0_nmix + sum(beta_pop[2:n.occ.cov] * XN_nmix[i, 2:n.occ.cov])
-        succprob <- kappa / (kappa + lambda[i])
-        N[i] ~ dnegbin(prob = succprob, size = kappa)
+        succprob[i] <- kappa / (kappa + lambda[i])
+        N[i] ~ dnegbin(prob = succprob[i], size = kappa)
       }
       
       ### Observation process
@@ -135,7 +136,7 @@ run_integrated_Nmix_RSF <- function(data_nmix,
   samplesint <- runMCMC(Cmcmc, 
                         niter = n.iter, 
                         nburnin = n.burnin, 
-                        thin = 1, 
+                        thin = n.thin, 
                         nchains = n.chains, 
                         samplesAsCodaMCMC = TRUE)
   return(samplesint)

@@ -17,6 +17,7 @@ library(tidyverse)
 library(patchwork)
 library(sf)
 library(kableExtra)
+library(extrafont)
 
 load(file = paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
 load(file = paste0(local_path, "3.results/prediction_grid/grid_nmix_all_sp.RData"))
@@ -56,7 +57,6 @@ grid_risk_nmix <- create_grid_risk(grid_result = grid_nmix_all_sp, score_df)
 
 grid_risk_nmix %>% as_tibble() %>% summary()
 grid_risk_occ %>% as_tibble() %>% summary()
-
 ```
 
 
@@ -240,7 +240,7 @@ map_vul_avg_nmix <- plot_vulnerability_map(grid_vulnerability = grid_risk_nmix,
 ```
 
 
-
+# Fig rapport
 # Map comparison of the results for the two methods
 
 ```{r}
@@ -269,7 +269,7 @@ plot_title = ""
 plot_title_size = 8
 legend_title_size = 9
 axis_text_size = 4
-plot_font = "Arial"
+plot_font = "Calibri"
 wind_farm_color <- c("brown", "darkgreen")
 
 map_risk <- 
@@ -279,16 +279,16 @@ map_risk <-
     scale_fill_distiller(palette = "Spectral", 
                          breaks = c(min(grid_vulnerability$value), max(grid_vulnerability$value)),
                          labels = c("Low", "High")) +
-    geom_sf(data = contour_golfe, color = "black", fill = "antiquewhite") +
-    geom_sf(data = wind_farm2, 
+    geom_sf(data = contour_golfe, color = NA, fill = "antiquewhite") +
+    geom_sf(data = wind_farm, 
             aes(col = as.factor(zone_type)), fill = NA) +
-    geom_sf_text(data = wind_farm2, aes(label = zone_nb, col = as.factor(zone_type)), size = 1.4) +
+    geom_sf_text(data = wind_farm, aes(label = zone_nb, col = as.factor(zone_type)), size = 1.4) +
     scale_color_manual(values = wind_farm_color) +
     #geom_sf(data = wind_farm, fill = NA, col = "black") +
     labs(title = plot_title) +
     theme_bw() +
     theme(
-      #text = element_text(family = plot_font),
+      text = element_text(family = plot_font),
       legend.position = legend_position,
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5, 
@@ -297,10 +297,13 @@ map_risk <-
       plot.title.position = 'plot',
       axis.title = element_blank(),
       axis.text = element_text(size = axis_text_size),
+      axis.line = element_blank(),
       strip.text = element_text(face = "bold", size = plot_title_size),
       strip.background = element_rect(fill = "white", linetype = "solid",
                                       color = "white", linewidth = 0.9),
-      panel.background = element_rect(fill = "transparent", color = "black", linewidth = 0.9)
+      panel.background = element_rect(fill = "transparent", color = NA),
+      plot.margin = unit(c(0, 0, 0, 0), "pt"),
+      panel.border = element_blank()
     ) +
     guides(
       fill = guide_colourbar(
@@ -308,7 +311,7 @@ map_risk <-
         title.theme = element_text(
           face = "bold",
           size = legend_title_size * 0.75,
-          # family = plot_font,
+           family = plot_font,
           hjust = 0.5),
         title.position = 'top',
         title.hjust = .5,
@@ -318,14 +321,14 @@ map_risk <-
         label.theme = element_text(size = legend_title_size * 0.65)),
       colour = "none")
 
-
+map_risk
 ```
 
 ```{r}
 grid_risk_nmix$vul_avg_scaled <- c(scale(grid_risk_nmix$vulnerability_average))
 grid_risk_occ$vul_avg_scaled <- c(scale(grid_risk_occ$vulnerability_average))
 
-risk_by_zone <- sapply(st_intersects(wind_farm2, grid_risk_nmix), function(x){grid_risk_nmix$vul_avg_scaled[x]}) %>% 
+risk_by_zone <- sapply(st_intersects(wind_farm, grid_risk_nmix), function(x){grid_risk_nmix$vul_avg_scaled[x]}) %>% 
   map(~{.x %>% as_tibble()}) %>% 
   bind_rows(.id = "Zone") %>% 
   mutate(zone_type = case_when(
@@ -333,7 +336,7 @@ risk_by_zone <- sapply(st_intersects(wind_farm2, grid_risk_nmix), function(x){gr
     Zone %in% 3:4 ~ "Potential zones",
   )) %>% 
   mutate(method = "N-mixture") %>% 
-  bind_rows(sapply(st_intersects(wind_farm2, grid_risk_occ), function(x){grid_risk_occ$vul_avg_scaled[x]}) %>% 
+  bind_rows(sapply(st_intersects(wind_farm, grid_risk_occ), function(x){grid_risk_occ$vul_avg_scaled[x]}) %>% 
   map(~{.x %>% as_tibble()}) %>% 
   bind_rows(.id = "Zone") %>% 
   mutate(zone_type = case_when(
@@ -358,9 +361,11 @@ boxplot_risk <- ggplot(data = risk_by_zone, aes(x = Zone, y = Vulnerability, col
       strip.text = element_text(face = "bold", size = plot_title_size),
       strip.background = element_rect(fill = "white", linetype = "solid",
                                       color = "white", linewidth = 0.9),
-      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9)) +
+      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9),
+      text = element_text(family = plot_font)) +
   labs(y = "Relative vulnerability")
 
+boxplot_risk
 ```
 
 
@@ -371,5 +376,56 @@ map_risk /
   plot_layout(heights = unit(c(8, 4), "cm")) +
   plot_annotation(tag_levels = "A") &
   theme(title = element_text(hjust = 0.5))
+```
+
+
+```{r, fig.width=10}
+#load("~/stage_M2/1.data/covariates_data_non_scaled.rdata")
+grid_risk_nmix$dist_to_shore <- covariates_data$dist_to_shore
+grid_risk_occ$dist_to_shore <- covariates_data$dist_to_shore
+
+grid_risk_nmix$bathymetry <- abs(covariates_data$bathymetry)
+grid_risk_occ$bathymetry <- abs(covariates_data$bathymetry)
+
+grid_risk_nmix$mean_CHL <- covariates_data$mean_CHL
+grid_risk_occ$mean_CHL <- covariates_data$mean_CHL
+
+grid_risk_nmix$mean_SST <- covariates_data$mean_SST
+grid_risk_occ$mean_SST <- covariates_data$mean_SST
+
+grid_risk_nmix %>% as_tibble() %>% 
+  mutate(vul_scaled = (vulnerability_average - mean(vulnerability_average) / sd(vulnerability_average)),
+         vul_scaled2 = c(scale(vulnerability_average))) %>% 
+  bind_rows(grid_risk_occ %>% as_tibble() %>% 
+              mutate(vul_scaled = (vulnerability_average - mean(vulnerability_average) / sd(vulnerability_average)),
+         vul_scaled2 = c(scale(vulnerability_average))),
+            .id = "model") %>% 
+  mutate(model = ifelse(model == 1, "N-mixture", "Occupancy")) %>% 
+  pivot_longer(c(dist_to_shore, bathymetry, mean_CHL, mean_SST), names_to = "Covar") %>% 
+  ggplot(aes(x = value, y = vul_scaled2, color = model, fill = model)) +
+  facet_wrap(~Covar, scale = "free",
+             labeller = labeller(Covar = c(bathymetry = "Depth (m)", 
+                                   dist_to_shore = "Distance to the coast (km)", 
+                                   mean_CHL = "Chlorophyl A", 
+                                   mean_SST = "Sea Surface Temperature (°C)"))) +
+  geom_line(alpha = 0.4) +
+  geom_smooth() +
+  scale_fill_manual(values = c("#9f77b4", "#df9f0a")) +
+  scale_color_manual(values = c("#9f77b4", "#df9f0a")) +
+  geom_hline(yintercept = 0, color = "darkgrey", linetype = "dashed") +
+  theme_bw() +
+  theme(
+    text = element_text(family = "Rubik"),
+    panel.border = element_blank(),
+    legend.position = "bottom",
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "white", linetype = "solid",
+                                    color = "white", linewidth = 0.9),
+    panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9)
+  ) +
+  labs(title = "Relation btw seabird vulnerability and environmental covariates",
+       x = "",
+       y = "Relative vulnerability",
+       color = "Model", fill = "Model")
 ```
 

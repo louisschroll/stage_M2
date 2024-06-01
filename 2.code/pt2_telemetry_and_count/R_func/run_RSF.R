@@ -16,7 +16,7 @@
 #' -------------------------------------------------------------------------------
 
 
-run_RSF <- function(rsf_list, n.iter = 11000, n.burnin = 1000, thin = 1, n.chains = 3){
+run_RSF <- function(rsf_list, n.iter = 11000, n.burnin = 1000, n.thin = 1, n.chains = 3){
   # Nimble model
   rsf.nimble <- nimbleCode({
     # Priors
@@ -63,7 +63,7 @@ run_RSF <- function(rsf_list, n.iter = 11000, n.burnin = 1000, thin = 1, n.chain
   samplesRSF <- runMCMC(Cmcmc, 
                         niter = n.iter, 
                         nburnin = n.burnin, 
-                        thin = thin, 
+                        thin = n.thin, 
                         nchains = n.chains, 
                         samplesAsCodaMCMC = TRUE)
   return(samplesRSF)
