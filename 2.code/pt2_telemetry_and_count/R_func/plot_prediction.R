@@ -82,6 +82,12 @@ plot_prediction <- function(new_grid,
     geom_sf(data = contour_golfe, color = "lightgrey", fill = "lightgrey") +
     #geom_sf(data = wind_farm, fill = NA, col = "black") +
     labs(title = plot_title) +
+    ggspatial::annotation_scale(location = "br", 
+                                pad_y = unit(0.12, "cm"),
+                                pad_x = unit(0.1, "cm"),
+                                width_hint = 0.22,
+                                height = unit(0.07, "cm"),
+                                text_cex = 0.4) +
     map_theme
   
   if (add_colonies) {
@@ -114,6 +120,12 @@ plot_prediction <- function(new_grid,
         barheight = unit(.4, 'lines'),
         label.theme = element_text(size = legend_title_size * 0.65)),
       colour = "none") +
+    ggspatial::annotation_scale(location = "br", 
+                                pad_y = unit(0.12, "cm"),
+                                pad_x = unit(0.1, "cm"),
+                                width_hint = 0.22,
+                                height = unit(0.07, "cm"),
+                                text_cex = 0.4) +
     map_theme +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank())
