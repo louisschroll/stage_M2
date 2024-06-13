@@ -26,6 +26,7 @@ load(file = paste0(local_path, "1.data/wind_farm_boundaries2.RData")) # wind far
 
 load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
 load(file = paste0(local_path, "1.data/all_seabirds_counts.rdata"))
+load("~/stage_M2/1.data/spatial_objects/cities_sf.RData")
 
 depth_raster <- rast(paste0(local_path, "1.data/spatial_objects/raster_depth.tif"))
 gdl_elev_raster <- rast(paste0(local_path, "1.data/spatial_objects/raster_elevation_gdl.tif"))
@@ -80,7 +81,7 @@ lion_gulf_plot <- ggplot() +
   layer_spatial(gdl_elev_raster) +
   scale_fill_gradientn(colors = terrain.colors(n = 40), 
                        na.value = 0,
-                       guide = FALSE) +
+                       guide = "none") +
   geom_sf_text(data = cities_sf, 
                aes(label = nom), 
                size = 3,
@@ -234,4 +235,194 @@ effort_column
 
 
 
+
+```{r}
+ggplot() +
+  geom_raster(data = depth_tibble, aes(x = x, y = y, fill = bathymetry)) +
+  scale_fill_distiller(guide = guide_colourbar(
+        title = "Bathymetry",
+        title.theme = element_text(
+          size = 8, 
+          face = "bold",
+          family = font_family,
+          hjust = 0.5),
+        title.position = 'top',
+        title.hjust = 0,
+        ticks = FALSE,
+        barwidth = unit(0.4, 'lines'),
+        barheight = unit(5, 'lines'),
+        label.theme = element_text(size = 6))) +
+  new_scale_fill() +
+  geom_sf(data = wind_farm, 
+            aes(col = as.factor(zone_type), fill = as.factor(zone_type)),
+          alpha = 0.1) +
+  geom_sf_text(data = wind_farm, 
+               aes(label = zone_nb, col = as.factor(zone_type)), 
+               size = 3,
+               family = font_family) +
+  scale_color_manual(values = wind_farm_color, guide = FALSE) +
+  scale_fill_manual(values = wind_farm_color, name = "Wind farm zones",
+                    guide = guide_legend(title.position = 'top',
+                                         nrow = 2, byrow = TRUE,
+                                         title.theme = element_text(
+                                           size = 8, 
+                                           face = "bold"))) +
+  geom_sf(data = study_area, lwd = 0.2, fill = NA, color = "black") +
+  new_scale_fill() +
+  layer_spatial(gdl_elev_raster) +
+  scale_fill_gradientn(colors = terrain.colors(n = 40), 
+                       na.value = 0,
+                       guide = "none") +
+  geom_sf_text(data = cities_sf, 
+               aes(label = nom), 
+               size = 3,
+               family = font_family) +
+  # geom_text(data=city_names,
+  #           aes(x=X, y=Y, label = nom),
+  #           color = "black",
+  #           fontface = "bold",
+  #           check_overlap = T,
+  #           size = 2) +
+  annotation_scale(location = "br", 
+                   pad_y = unit(0.9, "cm"),
+                   pad_x = unit(0.8, "cm"),
+                   width_hint = 0.3,
+                   height = unit(0.15, "cm")) +
+  annotation_north_arrow(location = "tr", which_north = "true", 
+                         pad_x = unit(0.5, "cm"), 
+                         pad_y = unit(3, "cm"),
+                         style = north_arrow_fancy_orienteering,
+                         height = unit(1, "cm"),
+                         width = unit(1, "cm")) + 
+  annotate(geom = "text", x = 820000, y = 6180000, label = "Gulf of Lion", 
+           fontface = "italic", color = "grey22", size = 6) +
+  theme_classic() +
+  theme(legend.position = "right",
+        legend.box = "vertical",
+        legend.justification = 0.2,
+        legend.box.spacing = unit(0, "cm"),
+        axis.title = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        text = element_text(family = font_family),
+        plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+```
+
+```{r}
+plot_effort <- function(data_eff, data_obs, color, plot_title="", plot_subtitle=""){
+  ggplot() + 
+    geom_raster(data = depth_tibble2, aes(x = x, y = y, fill = bathymetry)) +
+    scale_fill_distiller(guide = F) +
+    new_scale_fill() +
+    layer_spatial(contour_gdl_elev) +
+    scale_fill_gradientn(colors = terrain.colors(n = 40), 
+                         na.value = 0,
+                         guide = FALSE) +
+    geom_sf(data = data_eff %>% st_intersection(study_area),
+            color = color, linewidth = 0.3)  +
+     geom_sf(data = data_obs %>% 
+               st_intersection(study_area) %>% 
+               filter(nom_fr == "sterne caugek"),
+            color = color, linewidth = 0.3, aes(size=effectif))  +
+    annotation_scale(location = "br", width_hint = 0.2,
+                     pad_x = unit(0.6, "cm"),
+                     pad_y = unit(0.5, "cm"),
+                     height = unit(0.07, "cm"),
+                     text_cex = 0.4) +
+    theme_classic() +
+    theme(
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          axis.line = element_blank(),
+          plot.title = element_text(hjust = 0.5, 
+                                    size = 10, 
+                                    face = "bold",
+                                    margin = margin(0,0,3,0)),
+          plot.subtitle = element_text(hjust = 0.5, 
+                                    size = 8,
+                                    margin = margin(0,0,-5,0)),
+          text = element_text(family = font_family),
+          plot.margin = unit(c(0, 0, 0, 0), "pt")) +
+    labs(title = plot_title,
+         subtitle = plot_subtitle)
+}
+
+ 
+p1 <- plot_effort(migralion_eff, 
+                  migralion_obs,
+                  color = "darkmagenta",
+                  plot_title = "Migralion",
+                  plot_subtitle = "2022-2023")
+
+p2 <- plot_effort(pelmed_eff,
+                  pelmed_obs,
+                  color = "darkblue",
+                  plot_title = "Pelmed",
+                  plot_subtitle = "2017-2021")
+
+p3 <- plot_effort(samm_eff,
+                  samm_obs,
+                  color = "darkred",
+                  plot_title = "SAMM",
+                  plot_subtitle = "2011-2012 & 2018")
+
+p4 <- plot_effort(pnm_eff,
+                  pnm_obs,
+                  color = "darkorange",
+                  plot_title = "PNM",
+                  plot_subtitle = "2019-2021") 
+
+effort_column <- p1 + p2 + p3 + p4 +
+  plot_layout(ncol = 2)
+
+effort_column
+```
+
+
+```{r}
+# Install the necessary packages if not already installed
+if (!requireNamespace("dagitty", quietly = TRUE)) {
+  install.packages("dagitty")
+}
+if (!requireNamespace("ggdag", quietly = TRUE)) {
+  install.packages("ggdag")
+}
+
+# Load the packages
+library(dagitty)
+library(ggdag)
+library(ggplot2)
+
+# Define the DAG structure
+dag <- dagitty('
+  dag {
+    kappa -> N
+    beta -> N
+    N -> Nobs
+    p -> Nobs
+  }
+')
+
+# Convert to tidy DAG
+tidy_dag <- tidy_dagitty(dag)
+
+# Assign layers (1 for kappa, beta; 2 for N; 3 for Nobs and p)
+tidy_dag$data$layer <- ifelse(tidy_dag$data$name %in% c("kappa", "beta"), 1,
+                              ifelse(tidy_dag$data$name == "N", 2, 3))
+
+# Define colors for each layer
+layer_colors <- c("1" = "red", "2" = "blue", "3" = "green")
+
+# Plot the DAG with different colors for each layer
+ggdag(tidy_dag) +
+  geom_dag_node(aes(color = factor(layer)), size = 10) +
+  geom_dag_text(color = "white") +
+  geom_dag_edges() +
+  scale_color_manual(values = layer_colors) +
+  theme_dag()
+
+```
 

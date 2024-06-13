@@ -429,3 +429,103 @@ grid_risk_nmix %>% as_tibble() %>%
        color = "Model", fill = "Model")
 ```
 
+
+```{r}
+grid_vulnerability2 <- grid_risk_nmix %>% 
+  select(starts_with("vulnerability")) %>% 
+  mutate(#vulnerability_summer = c(scale(vulnerability_summer)),
+         #vulnerability_winter = (scale(vulnerability_winter)),
+         vulnerability_average = c(scale(vulnerability_average)))
+  
+
+
+legend_position = "right"
+plot_title = "Seabird vulnerability in the Gulf of Lion"
+plot_title_size = 16
+legend_title_size = 16
+axis_text_size = 10
+plot_font = "League Spartan"
+wind_farm_color <- c("brown", "darkgreen")
+
+map_risk <- 
+  ggplot() +
+  geom_sf(data = grid_vulnerability2, aes(fill = vulnerability_average), color = NA, lwd = 0) +
+  # facet_grid(methods ~ factor(season, levels = c("Winter", "Summer", "Average"))) + #, switch = "y"
+    scale_fill_distiller(palette = "Spectral", 
+                         breaks = c(min(grid_vulnerability2$vulnerability_average), max(grid_vulnerability2$vulnerability_average)),
+                         labels = c("Low", "High")
+                         ) +
+    guides(
+      fill = guide_colourbar(
+        title = "Relative \n vulnerability",
+        title.theme = element_text(
+          face = "bold",
+          size = legend_title_size * 0.75,
+           family = plot_font,
+          hjust = 0.5),
+        title.position = 'top',
+        title.hjust = .5,
+        ticks = FALSE,
+        barwidth = unit(.4, 'lines'),
+        barheight = unit(10, 'lines'),
+        label.theme = element_text(size = legend_title_size * 0.65)),
+      colour = "none") +
+    geom_sf(data = contour_golfe, color = NA, fill = "antiquewhite") +
+    geom_sf(data = wind_farm, 
+            aes(col = as.factor(zone_type)), fill = NA) +
+    geom_sf_text(data = wind_farm, aes(label = zone_nb, col = as.factor(zone_type)), size = 4) +
+    scale_color_manual(values = wind_farm_color) +
+    #geom_sf(data = wind_farm, fill = NA, col = "black") +
+    labs(title = plot_title) +
+    theme_bw() +
+    theme(
+      text = element_text(family = plot_font),
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5, 
+                                face = "bold", 
+                                size = plot_title_size),
+      plot.title.position = 'plot',
+      axis.title = element_blank(),
+      axis.text = element_text(size = axis_text_size),
+      axis.line = element_blank(),
+      strip.text = element_text(face = "bold", size = plot_title_size),
+      strip.background = element_rect(fill = "white", linetype = "solid",
+                                      color = "white", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = NA),
+      plot.margin = unit(c(0, 0, 0, 0), "pt"),
+      panel.border = element_blank()
+    )
+```
+
+```{r}
+boxplot_risk <- ggplot(data = risk_by_zone %>% filter(method == "N-mixture"), 
+                       aes(x = Zone, y = Vulnerability, color = zone_type)) +
+  geom_boxplot(linewidth = 0.35) +
+  # facet_wrap(~method, scales = "fixed") +
+  scale_color_manual(values = wind_farm_color) +
+  geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
+  theme_bw() +
+  theme(legend.position = "right",
+        legend.title = element_blank(),
+        #axis.text.y = element_blank(),
+        axis.text = element_text(size = axis_text_size * 1.4),
+        axis.title = element_text(size = axis_text_size * 1.8),
+        legend.text = element_text(size = legend_title_size * 0.75),
+      strip.text = element_text(face = "bold", size = plot_title_size),
+      strip.background = element_rect(fill = "white", linetype = "solid",
+                                      color = "white", linewidth = 0.9),
+      panel.background = element_rect(fill = "transparent", color = "white", linewidth = 0.9),
+      text = element_text(family = plot_font)) +
+  labs(y = "Relative vulnerability")
+
+boxplot_risk
+```
+
+
+```{r, fig.height=7, fig.width=10}
+map_risk
+```
+
+
+
