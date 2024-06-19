@@ -2,29 +2,374 @@
 title: "comparaison cohabys"
 author: "Louis Schroll"
 date: "2024-06-19"
-output: html_document
+output: 
+  html_document:
+    toc: TRUE
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.height=2.8, fig.width=8)
 ```
 
 
 ```{r}
 setwd("~/stage_M2")
 local_path <- "~/stage_M2/"
+path_cohabys_map <- paste0(local_path, "6.source/0_carte_cohabys/")
 library(sf)
 library(terra)
 library(tidyverse)
+library(patchwork)
 
-goel_raster <- terra::rast("6.source/0_carte_cohabys/Goélands gris (argenté + leucophée)/MED_GREGUL_ETE_prediction_mean_NORM.grd")
-plot(goel)
+# load data
+load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
+load(paste0(local_path, "1.data/grid_cells.rdata"))
+load(paste0(local_path, "1.data/RSF_data_scopoli_shearwaters.rdata"))
+load(file = paste0(local_path, "1.data/contour_golfe_du_lion.rdata"))
+load(file = paste0(local_path, "1.data/wind_farm_boundaries.RData"))
+load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+```
 
-goel_sf <- as_tibble(goel) %>% 
-  bind_cols(crds(goel)) %>%
-  st_as_sf(dim = "XYZ", coords = c("x", "y"))
+
+```{r}
+plot_carte_cohabys <- function(raster_file){
+  goel_raster <- rast(raster_file)
   
-plot(goel_sf)
-st_crs(goel_sf) <- crs(goel_raster)
+  contour_golfe2 <- contour_golfe %>% st_transform(crs = crs(goel_raster))
+  grid2 <- grid %>% st_transform(crs = crs(goel_raster))
+  
+  raster_croped <- crop(x = goel_raster,
+                        y = grid2,
+                        mask = TRUE) 
+  
+  df_croped <- as_tibble(raster_croped) %>% 
+    bind_cols(crds(raster_croped))
+  
+  plot <- ggplot() +
+    geom_raster(data = df_croped, aes(x=x, y=y, fill=mean)) +
+    scale_fill_viridis_c() +
+    geom_sf(data = contour_golfe2, color = NA) +
+    theme_bw() +
+    theme(axis.text = element_blank(),
+          axis.title = element_blank(),
+          legend.position = "none") +
+    labs(title = "Cohabys")
+  
+  return(plot)
+}
+
+
+# load functions
+path_to_Rfunc <- paste0(local_path, "2.code/pt2_telemetry_and_count/R_func")
+sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
+
+
+plot_myres_occ <- function(species){
+  grid_occupancy <- spOccupancy_res_grid %>% 
+    select(all_of(c("grid_c", paste0("mean_psi_", species), paste0("sd_psi_", species))))
+  names(grid_occupancy) <- c("mean_psi", "sd_psi", "grid_c")
+  occupancy_plot <- plot_prediction(grid_occupancy, plot_title = "spOccupancy")
+  
+  occ_plot <- occupancy_plot$mean_psi +
+    theme(legend.position = "none")
+  
+  return(occ_plot)
+}
+
+plot_myres_nmix <- function(species){
+  load(paste0(local_path, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
+  plots_nmix <- plot_prediction(grid_nmix, plot_title = "N-mixture") 
+  
+  nmix_plot <- plots_nmix$mean_psi+
+    theme(legend.position = "none")
+    return(nmix_plot)
+}
+```
+
+
+# Goeland
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Goélands gris (argenté + leucophée)/MED_GREGUL_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "goeland_leucophee_R"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot +
+  plot_annotation(theme = theme(legend.position = "none"))
+```
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Goélands gris (argenté + leucophée)/MED_GREGUL_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "goeland_leucophee_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+# Fou de Bassan
+
+Seulement hiver pour nous
+
+### ETE
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Fou de Bassan/MED_SULBAS_ETE_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
+```
+
+
+### HIVER
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Fou de Bassan/MED_SULBAS_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "fou_de_bassan_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+# Mouette pygmée
+
+(hiver)
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Mouette pygmée/MED_LARMIN_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "mouette_pygmee_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+# Oceanite
+
+(ete)
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Océanites/MED_OCESPP_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "oceanite_tempete"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+# Sternes (toutes espèces)
+
+Caugek pour nous // toutes espèces pour eux
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Sternes (toutes espèces)/MED_STESPP_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "sterne_caugek_R"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Sternes (toutes espèces)/MED_STESPP_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "sterne_caugek_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+# Petits puffins (Baléares, Anglais, Yelkouan)
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Petits puffins (Baléares, Anglais, Yelkouan)/MED_SMASHE_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "petit_puffin_R"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Petits puffins (Baléares, Anglais, Yelkouan)/MED_SMASHE_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "petit_puffin_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+# Grands puffins (cendré, majeur, Scopoli)
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Grands puffins (cendré, majeur, Scopoli)/MED_LARSHE_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+
+esp <- "puffin_de_scopoli_R"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+# Petites mouettes (rieuse + mélano +ind)
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Petites mouettes (rieuse + mélano +ind)/MED_SMAGUL_ETE_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+```
+
+**Mouette melano**
+
+```{r}
+esp <- "mouette_melanocephale_R"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Petites mouettes (rieuse + mélano +ind)/MED_SMAGUL_HIV_prediction_mean_NORM.grd")
+cohabys_plot <- plot_carte_cohabys(raster_file)
+```
+
+**Mouette melano**
+
+```{r}
+esp <- "mouette_melanocephale_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+```
+
+**Mouette rieuse**
+
+```{r}
+esp <- "mouette_rieuse_HR"
+occ_plot <- plot_myres_occ(species = esp)
+nmix_plot <- plot_myres_nmix(species = esp)  
+
+cohabys_plot + occ_plot + nmix_plot
+
+```
+
+
+# Laridés indéterminés
+
+### ete
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Laridés indéterminés/MED_LARSPP_ETE_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
+```
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Laridés indéterminés/MED_LARSPP_HIV_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
+```
+
+
+# Mouette tridactyle
+Pas fait de notre cote
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Mouette tridactyle/MED_RISTRI_HIV_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
+```
+
+# Cormorans (grand + huppé)
+
+pas fait pour nous
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Cormorans (grand + huppé)/MED_CORMSP_HIV_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
+```
+
+# Alcidés
+
+### hiver
+
+```{r}
+raster_file <- paste0(path_cohabys_map, 
+                      "Alcidés/MED_ALCSPP_HIV_prediction_mean_NORM.grd")
+plot_carte_cohabys(raster_file)
 ```
 
