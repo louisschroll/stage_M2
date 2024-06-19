@@ -1,0 +1,90 @@
+---
+title: "Untitled"
+author: "Louis Schroll"
+date: "2024-06-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# load package
+library(tidyverse, warn.conflicts = FALSE)
+library(sf)
+library(nimble, warn.conflicts = FALSE)
+library(patchwork)
+library(extrafont)
+
+local_path <- "~/stage_M2/"
+# load functions
+path_to_Rfunc <- paste0(local_path, "2.code/pt2_telemetry_and_count/R_func")
+sapply(paste0(path_to_Rfunc, "/", list.files(path_to_Rfunc)), source)
+
+source(paste0(local_path, "2.code/4_figure_rapport/make_fig_comparison.R"))
+
+# load data
+load(paste0(local_path, "1.data/all_seabirds_counts.rdata"))
+load(paste0(local_path, "1.data/grid_cells.rdata"))
+load(paste0(local_path, "1.data/RSF_data_scopoli_shearwaters.rdata"))
+load("~/stage_M2/1.data/contour_golfe_du_lion.rdata")
+```
+
+
+```{r}
+load(paste0(local_path, "3.results/grid_spOccupancy_results.RData"))
+
+
+species_vect <- c("sterne_pierregarin_R",
+                  "sterne_caugek_R",
+                  "oceanite_tempete",
+                  "labbe",
+                  "mouette_melanocephale_R",
+                  "mouette_melanocephale_HR",
+                  "macareux_moine_HR",
+                  "fou_de_bassan_HR",
+                  "mouette_pygmee_HR",
+                  "mouette_rieuse_HR",
+                  "puffin_de_scopoli_R"
+)
+
+title_list <- list(
+  sterne_caugek_R = "Sterne caugek (été)",
+  oceanite_tempete = "Océanite tempête (été)",
+  labbe = "Small skuas (summer)",
+  sterne_pierregarin_R = "STERNE PIERREGARIN (ETE)",
+  mouette_melanocephale_R ="Mediterranean gull (summer)",
+  mouette_melanocephale_HR = "Mediterranean gull (winter)",
+  macareux_moine_HR = "Atlantic puffin (winter)",
+  fou_de_bassan_HR = "Northern gannet (winter)",
+  mouette_pygmee_HR = "Little gull (winter)",
+  mouette_rieuse_HR = "Mouette rieuse (hiver)",
+  puffin_de_scopoli_R = "Puffin de Scopoli (été)"
+)
+
+plot_font <- "Calibri"
+
+
+
+```
+
+```{r, fig.width=10, fig.height=5}
+i = 1
+species <- species_vect[i]
+load(file = paste0(local_path, "3.results/prediction_grid/grid_Nmix_", species, ".rdata"))
+
+plots_nmix <- plot_prediction(grid_nmix, 
+                              legend_position = "top",
+                              remove_x_axis = F,
+                              plot_font = "League Spartan")
+
+plots_nmix$mean_psi_plot + plots_nmix$sd_psi_plot +
+  plot_annotation(title = title_list[[species]],
+                  theme = theme(
+        plot.title = element_text(
+          hjust = 0.5,
+          face = "bold",
+          family = "League Spartan")))
+```
+

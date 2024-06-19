@@ -4,11 +4,11 @@ make_fig_comparison <- function(species, fig_title = "", best_cov){
     select(all_of(c("grid_c", paste0(c("mean_psi_", "sd_psi_"), species))))
   names(grid_occ) <- c("mean_psi", "sd_psi", "grid_c")
   
-  predictive_maps <- plot_maps_by_models(species = species, 
+  predictive_maps <- wrap_elements(plot_maps_by_models(species = species, 
                                          grid_occ = grid_occ, 
                                          grid_nmix = grid_nmix, 
                                          grid_RSF = grid_RSF, 
-                                         grid_int = grid_int)
+                                         grid_int = grid_int))
 
   coefficient_plot <- gather_coeff_values(sampleNmixture = sampleNmixture, 
                                           samples_spOcc = samples_spOcc, 
@@ -16,12 +16,13 @@ make_fig_comparison <- function(species, fig_title = "", best_cov){
                                           samplesint = samplesint,
                                           selected_cov = best_cov[[species]]) %>%  
     change_covariate_names() %>% 
-    plot_coeff_by_model2(ncol = 2)
+    plot_coeff_by_model2(ncol = 2) 
+    wrap_elements()
   
-  precision_plot <- plot_space_use_precision(grid_nmix = grid_nmix, 
+  precision_plot <- wrap_elements(plot_space_use_precision(grid_nmix = grid_nmix, 
                                              grid_RSF = grid_RSF, 
                                              grid_int = grid_int, 
-                                             grid_spOcc = grid_occ)
+                                             grid_spOcc = grid_occ))
   
   plot_left <- (coefficient_plot / precision_plot) +
     plot_layout(heights = c(7, 4))
@@ -32,7 +33,7 @@ make_fig_comparison <- function(species, fig_title = "", best_cov){
     ) +
     plot_annotation(
       title = fig_title,
-      #caption = 'Source: Migralion project & PELMED 2017-2021',
+      tag_levels = "A",
       theme = theme(
         plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         legend.position = 'top'

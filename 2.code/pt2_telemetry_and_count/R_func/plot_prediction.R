@@ -440,7 +440,7 @@ plot_space_use_precision <- function(grid_nmix,
 
 
 plot_coeff_by_model2 <- function(coeff_df, 
-                                 plot_title = "B", 
+                                 plot_title = "", 
                                  plot_subtitle = "",
                                  plot_title_size = 10,
                                  axis_text_size = 7,
