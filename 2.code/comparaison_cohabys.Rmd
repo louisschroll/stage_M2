@@ -1,0 +1,30 @@
+---
+title: "comparaison cohabys"
+author: "Louis Schroll"
+date: "2024-06-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+setwd("~/stage_M2")
+local_path <- "~/stage_M2/"
+library(sf)
+library(terra)
+library(tidyverse)
+
+goel_raster <- terra::rast("6.source/0_carte_cohabys/Goélands gris (argenté + leucophée)/MED_GREGUL_ETE_prediction_mean_NORM.grd")
+plot(goel)
+
+goel_sf <- as_tibble(goel) %>% 
+  bind_cols(crds(goel)) %>%
+  st_as_sf(dim = "XYZ", coords = c("x", "y"))
+  
+plot(goel_sf)
+st_crs(goel_sf) <- crs(goel_raster)
+```
+
